@@ -110,15 +110,16 @@ export default function Homepage() {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
             backgroundImage: `url('/images/bps-office.png')`,
-            backgroundPosition: 'right center'
+            backgroundPosition: 'center right',
+            backgroundSize: 'cover'
           }}
         />
         
-        {/* Gradient Overlay - Strong blue on left, fading to transparent on right */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900 via-blue-800/95 via-blue-800/80 via-blue-700/60 via-blue-600/40 to-blue-500/20"></div>
+        {/* Gradient Overlay - Smooth transition from blue to transparent */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/95 via-blue-800/85 via-blue-700/70 via-blue-600/50 via-blue-500/35 via-blue-400/20 via-blue-300/10 to-transparent"></div>
         
-        {/* Additional overlay for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/90 via-blue-800/70 via-blue-700/50 via-blue-600/30 to-transparent"></div>
+        {/* Additional overlay for better text readability on left side */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/80 via-blue-800/60 via-blue-700/40 via-blue-600/25 via-blue-500/15 via-blue-400/8 via-blue-300/3 to-transparent"></div>
 
         <div className="relative container mx-auto px-4 py-16 lg:py-24 min-h-[600px] lg:min-h-[700px] flex items-center">
           <div className="grid lg:grid-cols-2 gap-12 items-center w-full">
