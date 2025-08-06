@@ -124,10 +124,6 @@ export default function Homepage() {
           <div className="grid lg:grid-cols-2 gap-12 items-center w-full">
             {/* Left Content */}
             <div className="space-y-8 z-10">
-              {/* Badge */}
-              <div className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
-                <span className="text-sm font-medium text-white">🏛️ Layanan Pemerintah Digital</span>
-              </div>
 
               {/* Main Heading */}
               <div className="space-y-4">
@@ -161,7 +157,7 @@ export default function Homepage() {
                   <Button 
                     size="lg" 
                     variant="outline" 
-                    className="w-full sm:w-auto border-2 border-white text-white hover:bg-white hover:text-blue-900 font-semibold px-8 py-4 rounded-xl transition-all duration-300 transform hover:-translate-y-1 backdrop-blur-sm"
+                    className="w-full sm:w-auto border-2 border-white bg-white/10 text-white hover:bg-white hover:text-blue-900 font-semibold px-8 py-4 rounded-xl transition-all duration-300 transform hover:-translate-y-1"
                   >
                     <Search className="w-5 h-5 mr-2" />
                     Cek Status Pengaduan
