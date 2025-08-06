@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { User, Menu, Home, FileText, Search, Shield } from 'lucide-react'
+import { User, Menu, Home, FileText, Search } from 'lucide-react'
+import Image from 'next/image'
 
 const navigationItems = [
   {
@@ -44,8 +45,14 @@ export default function Navigation() {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
               {/* BPS Logo */}
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center shadow-lg border border-white/30">
-                <Shield className="w-6 h-6 lg:w-7 lg:h-7 text-white" />
+              <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center">
+                <Image 
+                  src="/images/bps-logo.svg" 
+                  alt="Logo BPS" 
+                  width={50} 
+                  height={50} 
+                  className="w-100 h-100 lg:w-15 lg:h-15 object-contain"
+                />
               </div>
               
               {/* Brand Text */}
@@ -130,8 +137,14 @@ export default function Navigation() {
                   {/* Mobile Header */}
                   <div className="flex items-center justify-between p-6 border-b border-blue-600/30">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center border border-white/30">
-                        <Shield className="w-6 h-6 text-white" />
+                      <div className="w-10 h-10 flex items-center justify-center">
+                        <Image 
+                          src="/images/bps-logo.svg" 
+                          alt="Logo BPS" 
+                          width={32} 
+                          height={32} 
+                          className="w-8 h-8 object-contain"
+                        />
                       </div>
                       <div>
                         <h2 className="font-bold text-white">BPS Kota Bitung</h2>
