@@ -57,8 +57,8 @@ CREATE TABLE "public"."Notification" (
 -- CreateTable
 CREATE TABLE "public"."AdminUser" (
     "id" TEXT NOT NULL,
-    "username" TEXT NOT NULL,
-    "passwordHash" TEXT NOT NULL,
+    "username" TEXT,
+    "passwordHash" TEXT,
     "role" "public"."AdminRole" NOT NULL DEFAULT 'STAFF',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
