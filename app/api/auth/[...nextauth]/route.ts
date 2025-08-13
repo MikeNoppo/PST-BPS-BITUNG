@@ -15,13 +15,13 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.identifier || !credentials.password) return null
         const ident = credentials.identifier.toLowerCase()
-        const user = await prisma.user.findFirst({
+        const admin = await prisma.adminUser.findFirst({
           where: { username: ident }
         })
-        if (!user || !user.passwordHash) return null
-        const valid = await bcrypt.compare(credentials.password, user.passwordHash)
+        if (!admin || !admin.passwordHash) return null
+        const valid = await bcrypt.compare(credentials.password, admin.passwordHash)
         if (!valid) return null
-        return { id: user.id, name: user.username || 'User', role: user.role }
+        return { id: admin.id, name: admin.username || 'Admin', role: admin.role }
       }
     })
   ],
