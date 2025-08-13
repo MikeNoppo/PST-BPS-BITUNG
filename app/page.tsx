@@ -103,25 +103,25 @@ export default function Homepage() {
       {/* Enhanced Navigation - Non-sticky */}
       <Navigation />
 
-      {/* Hero Section with Office Background */}
-      <section className="relative min-h-[600px] lg:min-h-[700px] text-white overflow-hidden">
+  {/* Hero Section with Office Background */}
+  <section className="relative min-h-screen text-white overflow-hidden">
         {/* Background Image */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: `url('/images/bps-office.png')`,
-            backgroundPosition: 'center right',
+            backgroundImage: `url('/images/bps-office.jpg')`,
+            backgroundPosition: 'center',
             backgroundSize: 'cover'
           }}
         />
         
-        {/* Gradient Overlay - Smooth transition from blue to transparent */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/95 via-blue-800/85 via-blue-700/70 via-blue-600/50 via-blue-500/35 via-blue-400/20 via-blue-300/10 to-transparent"></div>
+  {/* Gradient Overlay - Smooth transition from blue to transparent */}
+  <div className="absolute inset-0 bg-gradient-to-r from-blue-900/90 via-blue-700/60 to-blue-900/10"></div>
         
-        {/* Additional overlay for better text readability on left side */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/80 via-blue-800/60 via-blue-700/40 via-blue-600/25 via-blue-500/15 via-blue-400/8 via-blue-300/3 to-transparent"></div>
+  {/* Additional overlay for better text readability on left side */}
+  <div className="absolute inset-0 bg-gradient-to-r from-blue-900/60 via-blue-600/30 to-blue-900/5"></div>
 
-        <div className="relative container mx-auto px-4 py-16 lg:py-24 min-h-[600px] lg:min-h-[700px] flex items-center">
+  <div className="relative container mx-auto px-4 py-16 lg:py-24 min-h-full flex items-center">
           <div className="grid lg:grid-cols-2 gap-12 items-center w-full">
             {/* Left Content */}
             <div className="space-y-8 z-10">
