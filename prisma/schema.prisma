@@ -29,16 +29,6 @@ enum StatusPengaduan {
   SELESAI
 }
 
-enum NotificationChannel {
-  EMAIL
-  WHATSAPP
-}
-
-enum NotificationStatus {
-  SUCCESS
-  FAILED
-}
-
 enum AdminRole {
   ADMIN
   STAFF
@@ -54,14 +44,12 @@ model Complaint {
   classification  KlasifikasiPengaduan
   description     String               // isi pengaduan
   status          StatusPengaduan      @default(BARU)
-  rtl             String?              // rencana tindak lanjut
   completedAt     DateTime?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
   // Relations
   updates         StatusUpdate[]
-  notifications   Notification[]
 
   @@index([createdAt])
   @@index([status])
@@ -79,22 +67,12 @@ model StatusUpdate {
   @@index([complaintId, createdAt])
 }
 
-model Notification {
-  id           String               @id @default(cuid())
-  complaintId  String
-  complaint    Complaint            @relation(fields: [complaintId], references: [id], onDelete: Cascade)
-  channel      NotificationChannel
-  status       NotificationStatus   @default(SUCCESS)
-  detail       String?
-  sentAt       DateTime             @default(now())
-
-  @@index([complaintId, sentAt])
-}
-
-model AdminUser {
+// Application users (admins & staff)
+model User {
   id           String     @id @default(cuid())
-  username     String     @unique
-  passwordHash String
+  email        String?    @unique
+  username     String?    @unique
+  passwordHash String?
   role         AdminRole  @default(STAFF)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
