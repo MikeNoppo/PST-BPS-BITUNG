@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -56,6 +57,7 @@ const mockComplaintsData = [
 ]
 
 export default function AdminDashboard() {
+  const { data: session, status } = useSession()
   const [complaints, setComplaints] = useState(mockComplaintsData)
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -174,16 +176,13 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
-    // Check authentication
-    const isAuth = localStorage.getItem('adminAuth')
-    if (!isAuth) {
+    if (status === 'unauthenticated') {
       router.push('/admin/login')
     }
-  }, [router])
+  }, [status, router])
 
-  const handleLogout = () => {
-    localStorage.removeItem('adminAuth')
-    router.push('/admin/login')
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/admin/login' })
   }
 
   const getStatusBadge = (status: string) => {
@@ -239,6 +238,10 @@ export default function AdminDashboard() {
           </div>
         </div>
       </header>
+
+      {status === 'loading' && (
+        <div className="p-6">Memuat sesi...</div>
+      )}
 
       <div className="flex">
         {/* Sidebar */}
@@ -380,7 +383,7 @@ export default function AdminDashboard() {
                     <Textarea
                       id="rtl"
                       value={selectedComplaint.rtl}
-                      onChange={(e) => setSelectedComplaint(prev => ({ ...prev, rtl: e.target.value }))}
+                      onChange={(e) => setSelectedComplaint((prev: any) => ({ ...prev, rtl: e.target.value }))}
                       rows={3}
                       className="mt-1"
                     />
@@ -391,7 +394,7 @@ export default function AdminDashboard() {
                       <Label htmlFor="status">Status Pengaduan</Label>
                       <Select 
                         value={selectedComplaint.status} 
-                        onValueChange={(value) => setSelectedComplaint(prev => ({ ...prev, status: value }))}
+                        onValueChange={(value) => setSelectedComplaint((prev: any) => ({ ...prev, status: value }))}
                       >
                         <SelectTrigger className="mt-1">
                           <SelectValue />
@@ -410,7 +413,7 @@ export default function AdminDashboard() {
                         id="tanggalSelesai"
                         type="date"
                         value={selectedComplaint.tanggalSelesai}
-                        onChange={(e) => setSelectedComplaint(prev => ({ ...prev, tanggalSelesai: e.target.value }))}
+                        onChange={(e) => setSelectedComplaint((prev: any) => ({ ...prev, tanggalSelesai: e.target.value }))}
                         className="mt-1"
                       />
                     </div>

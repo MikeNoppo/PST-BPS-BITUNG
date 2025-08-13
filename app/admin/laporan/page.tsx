@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -49,6 +50,7 @@ const mockAnnualData = [
 ]
 
 export default function AdminLaporan() {
+  const { status } = useSession()
   const [selectedMonth, setSelectedMonth] = useState('01')
   const [selectedYear, setSelectedYear] = useState('2024')
   const [reportType, setReportType] = useState('monthly')
@@ -226,9 +228,8 @@ export default function AdminLaporan() {
     }
   }, [router])
 
-  const handleLogout = () => {
-    localStorage.removeItem('adminAuth')
-    router.push('/admin/login')
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/admin/login' })
   }
 
   const getStatusBadge = (status: string) => {
@@ -272,13 +273,14 @@ export default function AdminLaporan() {
             <h1 className="text-xl font-bold text-blue-900">
               Admin Dashboard - PST BPS Kota Bitung
             </h1>
-            <Button onClick={handleLogout} variant="outline" className="flex items-center space-x-2">
+    <Button onClick={handleLogout} variant="outline" className="flex items-center space-x-2">
               <LogOut className="w-4 h-4" />
               <span>Logout</span>
             </Button>
           </div>
         </div>
       </header>
+  {status === 'loading' && <div className="p-6">Memuat sesi...</div>}
 
       <div className="flex">
         {/* Sidebar */}

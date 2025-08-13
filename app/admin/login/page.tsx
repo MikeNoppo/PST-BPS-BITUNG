@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,19 +22,16 @@ export default function AdminLogin() {
     e.preventDefault()
     setIsLoading(true)
     setError('')
-
-    // Simulate login process
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Simple authentication (in real app, this would be server-side)
-    if (credentials.username === 'admin' && credentials.password === 'admin123') {
-      // Store auth state (in real app, use proper session management)
-      localStorage.setItem('adminAuth', 'true')
-      router.push('/admin/dashboard')
-    } else {
+    const res = await signIn('credentials', {
+      redirect: false,
+      identifier: credentials.username,
+      password: credentials.password
+    })
+    if (res?.error) {
       setError('Username atau password salah')
+    } else {
+      router.push('/admin/dashboard')
     }
-    
     setIsLoading(false)
   }
 
