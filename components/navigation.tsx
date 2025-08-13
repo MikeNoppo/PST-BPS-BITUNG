@@ -29,6 +29,7 @@ const navigationItems = [
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
+  const isHome = pathname === '/'
 
   const isActive = (href: string) => {
     if (href === '/') {
@@ -38,7 +39,15 @@ export default function Navigation() {
   }
 
   return (
-    <header className="w-full bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 border-b border-blue-600/30">
+    <header
+      className={
+        `w-full z-50 ${
+          isHome
+            ? 'absolute top-0 left-0 right-0 bg-transparent border-transparent'
+            : 'bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 border-b border-blue-600/30'
+        }`
+      }
+    >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo and Brand */}
