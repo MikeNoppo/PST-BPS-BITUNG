@@ -121,10 +121,9 @@ export default function Homepage() {
   {/* Additional overlay for better text readability on left side */}
   <div className="absolute inset-0 bg-gradient-to-r from-blue-900/60 via-blue-600/30 to-blue-900/5"></div>
 
-  <div className="relative container mx-auto px-4 py-16 lg:py-24 min-h-full flex items-center">
-          <div className="grid lg:grid-cols-2 gap-12 items-center w-full">
-            {/* Left Content */}
-            <div className="space-y-8 z-10">
+  <div className="relative container mx-auto px-4 py-16 lg:py-24 min-h-full flex items-center justify-start">
+          {/* Centered Content */}
+          <div className="w-full max-w-4xl flex flex-col items-start text-left z-10 translate-y-16 lg:translate-y-28 space-y-8">
 
               {/* Main Heading */}
               <div className="space-y-4">
@@ -182,14 +181,6 @@ export default function Homepage() {
                 </div>
               </div>
             </div>
-
-            {/* Right side - Space for office building to show through gradient */}
-            <div className="relative lg:block hidden">
-              {/* This space intentionally left for the office building background to show through */}
-              <div className="h-96 flex items-center justify-center">
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
