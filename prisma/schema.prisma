@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma schema for PST BPS Bitung complaint system
+// Docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
@@ -12,4 +9,93 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// Enums
+enum KlasifikasiPengaduan {
+  PERSYARATAN_LAYANAN
+  PROSEDUR_LAYANAN
+  WAKTU_PELAYANAN
+  BIAYA_TARIF_PELAYANAN
+  PRODUK_PELAYANAN
+  KOMPETENSI_PELAKSANA_PELAYANAN
+  PERILAKU_PETUGAS_PELAYANAN
+  SARANA_DAN_PRASARANA
+}
+
+enum StatusPengaduan {
+  BARU
+  PROSES
+  SELESAI
+}
+
+enum NotificationChannel {
+  EMAIL
+  WHATSAPP
+}
+
+enum NotificationStatus {
+  SUCCESS
+  FAILED
+}
+
+enum AdminRole {
+  ADMIN
+  STAFF
+}
+
+// Core models
+model Complaint {
+  id              String               @id @default(cuid())
+  code            String               @unique             // e.g., PGD001234
+  reporterName    String
+  email           String
+  phone           String
+  classification  KlasifikasiPengaduan
+  description     String               // isi pengaduan
+  status          StatusPengaduan      @default(BARU)
+  rtl             String?              // rencana tindak lanjut
+  completedAt     DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  // Relations
+  updates         StatusUpdate[]
+  notifications   Notification[]
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([classification])
+}
+
+model StatusUpdate {
+  id           String          @id @default(cuid())
+  complaintId  String
+  complaint    Complaint       @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  status       StatusPengaduan
+  note         String?
+  createdAt    DateTime        @default(now())
+
+  @@index([complaintId, createdAt])
+}
+
+model Notification {
+  id           String               @id @default(cuid())
+  complaintId  String
+  complaint    Complaint            @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  channel      NotificationChannel
+  status       NotificationStatus   @default(SUCCESS)
+  detail       String?
+  sentAt       DateTime             @default(now())
+
+  @@index([complaintId, sentAt])
+}
+
+model AdminUser {
+  id           String     @id @default(cuid())
+  username     String     @unique
+  passwordHash String
+  role         AdminRole  @default(STAFF)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
