@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { FileText, Search } from 'lucide-react'
 import Navigation from '@/components/navigation'
+import { Footer } from '@/components/footer'
 import { ComplaintsTable, type ComplaintPublic } from '@/components/home/complaints-table'
 
 // In real scenario you would fetch from DB here (Server Component)
@@ -107,6 +108,7 @@ export default function Homepage() {
           <ComplaintsTable initialComplaints={mockComplaints} />
         </div>
       </section>
+      <Footer />
     </div>
   )
 }
