@@ -39,9 +39,10 @@ export default function Homepage() {
   {/* Additional overlay for better text readability on left side */}
   <div className="absolute inset-0 bg-gradient-to-r from-blue-900/60 via-blue-600/30 to-blue-900/5"></div>
 
-  <div className="relative container mx-auto px-4 py-16 lg:py-24 min-h-full flex items-center justify-start">
+  <div className="relative container mx-auto px-4 py-16 lg:py-24 pb-28 min-h-full flex items-center justify-start">
           {/* Centered Content */}
-          <div className="w-full max-w-4xl flex flex-col items-start text-left z-10 translate-y-16 lg:translate-y-28 space-y-8">
+          {/* NOTE: Removed translate-y-* classes that pushed content downward causing the stats cards to sit below the hero section height and appear 'tertutup' oleh section berikutnya. */}
+          <div className="w-full max-w-4xl flex flex-col items-start text-left z-10 space-y-8">
 
               {/* Main Heading */}
               <div className="space-y-4">
