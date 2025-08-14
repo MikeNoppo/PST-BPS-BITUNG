@@ -220,13 +220,12 @@ export default function AdminLaporan() {
     document.body.removeChild(link)
   }
 
+  // Session status sudah di-handle oleh middleware + useSession.
   useEffect(() => {
-    // Check authentication
-    const isAuth = localStorage.getItem('adminAuth')
-    if (!isAuth) {
+    if (status === 'unauthenticated') {
       router.push('/admin/login')
     }
-  }, [router])
+  }, [status, router])
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: '/admin/login' })
