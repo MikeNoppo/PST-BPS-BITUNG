@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { MapPin, Phone, Globe, ArrowUp, Clock, Lock, ShieldCheck } from 'lucide-react'
 
 // Reusable site footer (server component)
 export function Footer() {
@@ -34,21 +35,56 @@ export function Footer() {
         <div className="text-sm space-y-3">
           <p className="font-semibold text-blue-50 tracking-wide text-xs uppercase">Kontak</p>
           <ul className="space-y-2 text-blue-200/90">
-            <li><span className="block">Jl. Sam Ratulangi No. 42</span><span>Bitung, Sulawesi Utara</span></li>
-            <li><a href="tel:+62xxxxxxxxxxx" className="hover:text-white">Telp: (xxx) xxx xxxx</a></li>
-            <li><a href="mailto:bitungkota@bps.go.id" className="hover:text-white">bitungkota@bps.go.id</a></li>
+            <li>
+              <a
+                href="https://www.google.com/maps/place/Kantor+BPS+Kota+Bitung/@1.4353621,125.1167755,17z/data=!4m15!1m8!3m7!1s0x328706a9fd9b0a1d:0x9756b1684282fb67!2sJl.+Stadion+2+Saudara,+Kota+Bitung,+Sulawesi+Utara!3b1!8m2!3d1.436188!4d125.1109283!16s%2Fg%2F1hm3lggfh!3m5!1s0x328706a827fb88bb:0x164eca2877b0e4b7!8m2!3d1.4347919!4d125.1179159!16s%2Fg%2F11g81fn37w?entry=ttu&g_ep=EgoyMDI1MDgxMS4wIKXMDSoASAFQAw%3D%3D"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white block group"
+                aria-label="Buka lokasi di Google Maps"
+              >
+                <span className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 mt-0.5 text-blue-300 group-hover:text-white transition-colors" aria-hidden="true" />
+                  <span>
+                    <span className="block">Jl. Stadion 2 Saudara</span>
+                    <span className="block">Manembo-nembo Tengah, Kec. Matuari</span>
+                    <span className="block">Kota Bitung, Sulawesi Utara</span>
+                  </span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a href="tel:+62xxxxxxxxxxx" className="hover:text-white flex items-center gap-2">
+                <Phone className="w-4 h-4 text-blue-300 group-hover:text-white transition-colors" aria-hidden="true" />
+                <span>Telp: (xxx) xxx xxxx</span>
+              </a>
+            </li>
+            <li>
+              <a
+                href="http://bitungkota.bps.go.id/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white flex items-center gap-2"
+              >
+                <Globe className="w-4 h-4 text-blue-300 group-hover:text-white transition-colors" aria-hidden="true" />
+                <span>bitungkota.bps.go.id</span>
+              </a>
+            </li>
           </ul>
         </div>
         {/* Informasi */}
         <div className="text-sm space-y-3">
           <p className="font-semibold text-blue-50 tracking-wide text-xs uppercase">Informasi</p>
             <ul className="space-y-2 text-blue-200/90">
-              <li>Layanan 24/7</li>
-              <li>Data rahasia &amp; aman</li>
-              <li>Komitmen peningkatan mutu</li>
+              <li className="flex items-center gap-2"><Clock className="w-4 h-4 text-blue-300" aria-hidden="true" /> <span>Layanan 24/7</span></li>
+              <li className="flex items-center gap-2"><Lock className="w-4 h-4 text-blue-300" aria-hidden="true" /> <span>Data rahasia &amp; aman</span></li>
+              <li className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-blue-300" aria-hidden="true" /> <span>Komitmen peningkatan mutu</span></li>
             </ul>
             <div className="pt-2">
-              <Link href="#top" className="inline-block text-xs bg-blue-800/40 hover:bg-blue-700/60 px-3 py-1.5 rounded-md transition-colors">Kembali ke atas</Link>
+              <Link href="#top" className="inline-flex items-center gap-1 text-xs bg-blue-800/40 hover:bg-blue-700/60 px-3 py-1.5 rounded-md transition-colors group">
+                <ArrowUp className="w-3.5 h-3.5 text-blue-300 group-hover:text-white transition-colors" aria-hidden="true" />
+                <span>Kembali ke atas</span>
+              </Link>
             </div>
         </div>
       </div>

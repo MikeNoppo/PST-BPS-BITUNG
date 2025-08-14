@@ -4,6 +4,7 @@ import { FileText, Search } from 'lucide-react'
 import Navigation from '@/components/navigation'
 import { Footer } from '@/components/footer'
 import { ComplaintsTable, type ComplaintPublic } from '@/components/home/complaints-table'
+import { TextReveal } from '@/components/ui/text-reveal'
 
 // In real scenario you would fetch from DB here (Server Component)
 const mockComplaints: ComplaintPublic[] = [
@@ -47,11 +48,28 @@ export default function Homepage() {
               {/* Main Heading */}
               <div className="space-y-4">
                 <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight">
-                  <span className="block text-white drop-shadow-lg">Layanan</span>
-                  <span className="block text-blue-100 drop-shadow-lg">Pengaduan Online</span>
-                  <span className="block text-2xl lg:text-3xl xl:text-4xl font-semibold text-blue-200 mt-2 drop-shadow-lg">
+                  <TextReveal
+                    variant="slideUp"
+                    wordLevel
+                    className="block text-white drop-shadow-lg"
+                  >
+                    Layanan
+                  </TextReveal>
+                  <TextReveal
+                    variant="slideUp"
+                    wordLevel
+                    delay={0.25}
+                    className="block text-blue-100 drop-shadow-lg"
+                  >
+                    Pengaduan Online
+                  </TextReveal>
+                  <TextReveal
+                    variant="fade"
+                    delay={0.55}
+                    className="block text-2xl lg:text-3xl xl:text-4xl font-semibold text-blue-200 mt-2 drop-shadow-lg"
+                  >
                     BPS Kota Bitung
-                  </span>
+                  </TextReveal>
                 </h1>
                 
                 {/* Subtitle */}
