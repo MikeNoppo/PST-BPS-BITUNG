@@ -102,10 +102,19 @@ export default function Homepage() {
         </div>
       </section>
 
-      {/* Complaints List Section */}
-      <section className="py-12">
-        <div className="container mx-auto px-4">
-          <ComplaintsTable initialComplaints={mockComplaints} />
+      {/* Complaints List Section - Themed to blend with hero/footer */}
+      <section className="relative py-20 bg-gradient-to-b from-blue-950 via-blue-900 to-blue-950 overflow-hidden">
+        {/* subtle decorative gradients */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-32 -right-16 w-96 h-96 bg-blue-700/40 blur-[110px] rounded-full" />
+          <div className="absolute bottom-0 left-0 w-[36rem] h-[36rem] bg-blue-800/30 blur-[140px] rounded-full" />
+        </div>
+        <div className="container relative mx-auto px-4">
+          <div className="mb-10 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-200 via-white to-blue-200 bg-clip-text text-transparent drop-shadow-sm">Statistik Pengaduan Publik</h2>
+            <p className="mt-3 text-blue-200/80 max-w-2xl mx-auto text-sm md:text-base">Daftar ringkas pengaduan terbaru yang masuk. Transparansi untuk pelayanan yang lebih baik.</p>
+          </div>
+          <ComplaintsTable variant="dark" initialComplaints={mockComplaints} />
         </div>
       </section>
       <Footer />

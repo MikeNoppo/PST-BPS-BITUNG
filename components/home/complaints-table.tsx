@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Download } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 export interface ComplaintPublic {
   id: string
@@ -17,11 +18,15 @@ export interface ComplaintPublic {
 
 interface Props {
   initialComplaints: ComplaintPublic[]
+  /** Optional visual variant. 'dark' renders a translucent blue card suited for dark / hero-adjacent sections */
+  variant?: 'default' | 'dark'
 }
 
-export function ComplaintsTable({ initialComplaints }: Props) {
+export function ComplaintsTable({ initialComplaints, variant = 'default' }: Props) {
   const [complaints, setComplaints] = useState(initialComplaints)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+
+  const isDark = variant === 'dark'
 
   const handleSort = (order: 'asc' | 'desc') => {
     setSortOrder(order)
@@ -71,28 +76,33 @@ export function ComplaintsTable({ initialComplaints }: Props) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-2xl text-blue-900">Pengaduan Terbaru</CardTitle>
-          <div className="flex items-center space-x-4">
+    <Card
+      className={cn(
+        isDark &&
+          'bg-gradient-to-br from-blue-900/80 via-blue-800/70 to-blue-900/80 border-blue-700/40 text-blue-50 shadow-xl backdrop-blur-sm'
+      )}
+    >
+      <CardHeader className={cn(isDark && 'pb-4')}> 
+        <div className="flex items-center justify-between gap-4 flex-col md:flex-row md:items-start">
+          <CardTitle className={cn('text-2xl', isDark ? 'text-white' : 'text-blue-900')}>Pengaduan Terbaru</CardTitle>
+          <div className="flex items-center space-x-4 w-full md:w-auto justify-between md:justify-end">
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600">Urutkan berdasarkan:</span>
+              <span className={cn('text-sm', isDark ? 'text-blue-200/80' : 'text-gray-600')}>Urutkan berdasarkan:</span>
               <Select value={sortOrder} onValueChange={(v) => handleSort(v as 'asc' | 'desc')}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className={cn('w-48', isDark && 'bg-blue-800/40 border-blue-700/60 text-blue-100 placeholder:text-blue-200 focus:ring-blue-400')}> 
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className={cn(isDark && 'bg-blue-900 text-blue-50 border-blue-700')}> 
                   <SelectItem value="desc">Tanggal Terbaru</SelectItem>
                   <SelectItem value="asc">Tanggal Terlama</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <Button 
+            <Button
               onClick={exportPublicDataToCSV}
-              variant="outline"
+              variant={isDark ? 'secondary' : 'outline'}
               size="sm"
-              className="flex items-center space-x-2"
+              className={cn('flex items-center space-x-2', isDark && 'bg-blue-800/50 hover:bg-blue-700/70 border border-blue-700/60 text-blue-100')}
               aria-label="Export pengaduan sebagai CSV"
             >
               <Download className="w-4 h-4" />
@@ -102,9 +112,9 @@ export function ComplaintsTable({ initialComplaints }: Props) {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
+        <Table className={cn(isDark && '[&_th]:text-blue-200/90 [&_td]:text-blue-100 [&_tr]:border-blue-700/40 [&_tr:hover]:bg-blue-800/40')}> 
           <TableHeader>
-            <TableRow>
+            <TableRow className={cn(isDark && 'hover:bg-transparent')}> 
               <TableHead>Nomor</TableHead>
               <TableHead>Tanggal Pengaduan</TableHead>
               <TableHead>Klasifikasi Pengaduan</TableHead>
@@ -113,7 +123,7 @@ export function ComplaintsTable({ initialComplaints }: Props) {
           </TableHeader>
           <TableBody>
             {complaints.map(c => (
-              <TableRow key={c.id}>
+              <TableRow key={c.id} className={cn(isDark && 'hover:bg-blue-800/40 border-blue-800/50')}> 
                 <TableCell className="font-medium">{c.id}</TableCell>
                 <TableCell>{new Date(c.tanggal).toLocaleDateString('id-ID')}</TableCell>
                 <TableCell>{c.klasifikasi}</TableCell>
