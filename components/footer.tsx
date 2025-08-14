@@ -5,7 +5,7 @@ import Image from 'next/image'
 export function Footer() {
   const year = new Date().getFullYear()
   return (
-    <footer className="bg-blue-950 text-blue-100 mt-16 border-t border-blue-800/40" aria-labelledby="footer-heading">
+  <footer className="bg-blue-950 text-blue-100 border-t border-blue-800/40" aria-labelledby="footer-heading">
       <h2 id="footer-heading" className="sr-only">Informasi bagian bawah situs</h2>
       <div className="container mx-auto px-4 py-14 grid gap-10 md:grid-cols-4">
         {/* Brand */}
