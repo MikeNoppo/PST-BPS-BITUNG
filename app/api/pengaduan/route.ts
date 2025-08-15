@@ -69,3 +69,52 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'SERVER_ERROR' }, { status: 500 })
   }
 }
+
+// GET /api/pengaduan?limit=5 -> daftar publik ringkas
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const limitParam = searchParams.get('limit')
+    const limit = Math.min(Math.max(parseInt(limitParam || '5', 10) || 5, 1), 50)
+    const complaints = await prisma.complaint.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: {
+        code: true,
+        createdAt: true,
+        classification: true,
+        status: true,
+      }
+    })
+    // Map to public shape expected by table (id, tanggal, klasifikasi, status)
+    const data = complaints.map(c => ({
+      id: c.code,
+      tanggal: c.createdAt.toISOString(),
+      klasifikasi: humanizeClassification(c.classification),
+      status: humanizeStatus(c.status)
+    }))
+    return NextResponse.json({ data })
+  } catch (e) {
+    console.error('GET /api/pengaduan error', e)
+    return NextResponse.json({ error: 'SERVER_ERROR' }, { status: 500 })
+  }
+}
+
+function humanizeClassification(c: string): string {
+  const map: Record<string,string> = {
+    PERSYARATAN_LAYANAN: 'Persyaratan Layanan',
+    PROSEDUR_LAYANAN: 'Prosedur Layanan',
+    WAKTU_PELAYANAN: 'Waktu Pelayanan',
+    BIAYA_TARIF_PELAYANAN: 'Biaya/Tarif Pelayanan',
+    PRODUK_PELAYANAN: 'Produk Pelayanan',
+    KOMPETENSI_PELAKSANA_PELAYANAN: 'Kompetensi Pelaksana Pelayanan',
+    PERILAKU_PETUGAS_PELAYANAN: 'Perilaku Petugas Pelayanan',
+    SARANA_DAN_PRASARANA: 'Sarana dan Prasarana'
+  }
+  return map[c] || c
+}
+
+function humanizeStatus(s: string): string {
+  const map: Record<string,string> = { BARU: 'Baru', PROSES: 'Proses', SELESAI: 'Selesai' }
+  return map[s] || s
+}

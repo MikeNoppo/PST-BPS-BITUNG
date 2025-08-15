@@ -5,17 +5,35 @@ import Navigation from '@/components/navigation'
 import { Footer } from '@/components/footer'
 import { ComplaintsTable, type ComplaintPublic } from '@/components/home/complaints-table'
 import { TextReveal } from '@/components/ui/text-reveal'
+import { prisma } from '@/lib/prisma'
 
-// In real scenario you would fetch from DB here (Server Component)
-const mockComplaints: ComplaintPublic[] = [
-  { id: 'PGD001', tanggal: '2024-01-15', klasifikasi: 'Prosedur Layanan', status: 'Selesai' },
-  { id: 'PGD002', tanggal: '2024-01-14', klasifikasi: 'Waktu Pelayanan', status: 'Proses' },
-  { id: 'PGD003', tanggal: '2024-01-13', klasifikasi: 'Perilaku Petugas Pelayanan', status: 'Baru' },
-  { id: 'PGD004', tanggal: '2024-01-12', klasifikasi: 'Sarana dan Prasarana', status: 'Selesai' },
-  { id: 'PGD005', tanggal: '2024-01-11', klasifikasi: 'Kompetensi Pelaksana Pelayanan', status: 'Proses' },
-]
+async function getLatestComplaints(limit = 5): Promise<ComplaintPublic[]> {
+  const rows = await prisma.complaint.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    select: { code: true, createdAt: true, classification: true, status: true }
+  })
+  const mapClass: Record<string,string> = {
+    PERSYARATAN_LAYANAN: 'Persyaratan Layanan',
+    PROSEDUR_LAYANAN: 'Prosedur Layanan',
+    WAKTU_PELAYANAN: 'Waktu Pelayanan',
+    BIAYA_TARIF_PELAYANAN: 'Biaya/Tarif Pelayanan',
+    PRODUK_PELAYANAN: 'Produk Pelayanan',
+    KOMPETENSI_PELAKSANA_PELAYANAN: 'Kompetensi Pelaksana Pelayanan',
+    PERILAKU_PETUGAS_PELAYANAN: 'Perilaku Petugas Pelayanan',
+    SARANA_DAN_PRASARANA: 'Sarana dan Prasarana'
+  }
+  const mapStatus: Record<string,string> = { BARU: 'Baru', PROSES: 'Proses', SELESAI: 'Selesai' }
+  return rows.map(r => ({
+    id: r.code,
+    tanggal: r.createdAt.toISOString(),
+    klasifikasi: mapClass[r.classification] || r.classification,
+    status: mapStatus[r.status] || r.status
+  }))
+}
 
-export default function Homepage() {
+export default async function Homepage() {
+  const complaints = await getLatestComplaints(5)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -133,7 +151,7 @@ export default function Homepage() {
             <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-200 via-white to-blue-200 bg-clip-text text-transparent drop-shadow-sm">Statistik Pengaduan Publik</h2>
             <p className="mt-3 text-blue-200/80 max-w-2xl mx-auto text-sm md:text-base">Daftar ringkas pengaduan terbaru yang masuk. Transparansi untuk pelayanan yang lebih baik.</p>
           </div>
-          <ComplaintsTable variant="dark" initialComplaints={mockComplaints} />
+          <ComplaintsTable variant="dark" initialComplaints={complaints} />
         </div>
       </section>
       <Footer />
