@@ -1,8 +1,10 @@
 "use client"
 
-import { useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
+import { useMemo, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { HighlightedBarChart } from '@/components/ui/highlighted-bar-chart'
+import { BarChart as ReBarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { Badge } from '@/components/ui/badge'
 
 // Data mock ringkasan (gantikan dengan fetch server nanti)
 const DATA = [
@@ -20,8 +22,22 @@ export default function AdminDashboard() {
   const klasifikasiChart = useMemo(() => {
     const m: Record<string, number> = {}
     DATA.forEach(d => { m[d.klasifikasi] = (m[d.klasifikasi] || 0) + 1 })
-    return Object.entries(m).map(([name, value]) => ({ name, value }))
+    return Object.entries(m).map(([klasifikasi, jumlah]) => ({ klasifikasi, jumlah }))
   }, [])
+
+  // Monthly complaints (dummy aggregation based on DATA dates; in real app fetch aggregated counts)
+  const monthlyChart = useMemo(() => {
+    const months = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, count: 0 }))
+    DATA.forEach(d => {
+      const m = new Date(d.tanggal).getMonth()
+      months[m].count += 1
+    })
+    // Ensure label formatting
+    return months.map(m => ({ month: m.month, label: new Date(2024, m.month - 1, 1).toLocaleString('id-ID', { month: 'short' }), count: m.count }))
+  }, [])
+
+  const [activeKlas, setActiveKlas] = useState<number | null>(null)
+  const activeKlasData = activeKlas === null ? null : klasifikasiChart[activeKlas]
 
   return (
     <div className="space-y-6">
@@ -47,21 +63,30 @@ export default function AdminDashboard() {
           <CardContent className="text-3xl font-semibold text-green-700">{selesai}</CardContent>
         </Card>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Distribusi Klasifikasi Pengaduan</CardTitle>
-        </CardHeader>
-        <CardContent style={{ height: 320 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={klasifikasiChart}>
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} angle={-15} textAnchor="end" height={60} />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="value" fill="#2563eb" radius={[4,4,0,0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <HighlightedBarChart
+          title="Distribusi Klasifikasi Pengaduan"
+          data={klasifikasiChart}
+          xKey="klasifikasi"
+          yKey="jumlah"
+          description="Ringkasan jumlah pengaduan per klasifikasi"
+          valueLabel="Klasifikasi"
+          color="var(--chart-1)"
+          shortLabel={(v: string) => v.length > 10 ? v.slice(0,10)+'…' : v}
+          formatValue={(v) => v.toString()}
+        />
+        <HighlightedBarChart
+          title="Jumlah Pengaduan Masuk (Tahun Berjalan)"
+          data={monthlyChart}
+          xKey="label"
+            yKey="count"
+          description="Total pengaduan per bulan"
+          valueLabel="Pengaduan"
+          color="var(--chart-2)"
+          shortLabel={(v: string) => v}
+          formatValue={(v) => v.toString()}
+        />
+      </div>
     </div>
   )
 }
