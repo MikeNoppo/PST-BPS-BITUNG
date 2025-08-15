@@ -7,7 +7,12 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Layanan Pengaduan PST BPS Kota Bitung',
-  description: 'Sistem Pengaduan Online untuk Pelayanan Statistik Terpadu BPS Kota Bitung'
+  description: 'Sistem Pengaduan Online untuk Pelayanan Statistik Terpadu BPS Kota Bitung',
+  icons: {
+    icon: '/images/bps-logo.svg',
+    shortcut: '/images/bps-logo.svg',
+    apple: '/images/bps-logo.svg'
+  }
 }
 
 export default function RootLayout({
