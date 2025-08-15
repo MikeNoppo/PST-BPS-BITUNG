@@ -5,18 +5,10 @@ import Navigation from '@/components/navigation'
 import { Footer } from '@/components/footer'
 import { ComplaintsTable, type ComplaintPublic } from '@/components/home/complaints-table'
 import { TextReveal } from '@/components/ui/text-reveal'
+import { getBaseUrl } from '@/lib/utils'
 export const revalidate = 60 // seconds
 
-// Build an absolute base URL for server-side (pre)rendering. Relative URLs like "/api/..."
-// fail during static generation because there's no request context.
-function getBaseUrl() {
-  // Prefer explicit public base URL
-  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL.replace(/\/$/, '')
-  // Vercel sets VERCEL_URL without protocol
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
-  // Fallback to localhost (build-time previews or dev)
-  return 'http://localhost:3000'
-}
+
 
 async function getLatestComplaints(limit = 5): Promise<ComplaintPublic[]> {
   const base = getBaseUrl()
