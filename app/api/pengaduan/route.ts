@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 
@@ -63,6 +64,8 @@ export async function POST(req: Request) {
       },
       select: { id: true, code: true, createdAt: true }
     })
+  // Invalidate public complaints list cache (ISR tag)
+  try { revalidateTag('complaints-public') } catch {}
     return NextResponse.json({ data: complaint })
   } catch (e: any) {
     console.error('POST /api/pengaduan error', e)

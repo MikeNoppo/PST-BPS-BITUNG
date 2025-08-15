@@ -5,31 +5,14 @@ import Navigation from '@/components/navigation'
 import { Footer } from '@/components/footer'
 import { ComplaintsTable, type ComplaintPublic } from '@/components/home/complaints-table'
 import { TextReveal } from '@/components/ui/text-reveal'
-import { prisma } from '@/lib/prisma'
+export const revalidate = 60 // seconds
 
 async function getLatestComplaints(limit = 5): Promise<ComplaintPublic[]> {
-  const rows = await prisma.complaint.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: limit,
-    select: { code: true, createdAt: true, classification: true, status: true }
-  })
-  const mapClass: Record<string,string> = {
-    PERSYARATAN_LAYANAN: 'Persyaratan Layanan',
-    PROSEDUR_LAYANAN: 'Prosedur Layanan',
-    WAKTU_PELAYANAN: 'Waktu Pelayanan',
-    BIAYA_TARIF_PELAYANAN: 'Biaya/Tarif Pelayanan',
-    PRODUK_PELAYANAN: 'Produk Pelayanan',
-    KOMPETENSI_PELAKSANA_PELAYANAN: 'Kompetensi Pelaksana Pelayanan',
-    PERILAKU_PETUGAS_PELAYANAN: 'Perilaku Petugas Pelayanan',
-    SARANA_DAN_PRASARANA: 'Sarana dan Prasarana'
-  }
-  const mapStatus: Record<string,string> = { BARU: 'Baru', PROSES: 'Proses', SELESAI: 'Selesai' }
-  return rows.map(r => ({
-    id: r.code,
-    tanggal: r.createdAt.toISOString(),
-    klasifikasi: mapClass[r.classification] || r.classification,
-    status: mapStatus[r.status] || r.status
-  }))
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/pengaduan?limit=${limit}`,
+    { next: { revalidate: 60, tags: ['complaints-public'] } })
+  if (!res.ok) return []
+  const json = await res.json()
+  return json.data as ComplaintPublic[]
 }
 
 export default async function Homepage() {
