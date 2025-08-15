@@ -93,12 +93,12 @@ export default function PengaduanPage() {
   }
 
   const badge = (s: string) => {
-    const base = 'px-2 py-0.5 rounded text-xs font-medium'
+    const base = 'px-2 py-0.5 rounded text-xs font-medium border'
     switch (s) {
-      case 'Baru': return <span className={`${base} bg-blue-100 text-blue-800`}>Baru</span>
-      case 'Proses': return <span className={`${base} bg-orange-100 text-orange-800`}>Proses</span>
-      case 'Selesai': return <span className={`${base} bg-green-100 text-green-800`}>Selesai</span>
-      default: return <span className={`${base} bg-gray-100 text-gray-700`}>{s}</span>
+      case 'Baru': return <span className={`${base} bg-blue-800/40 border-blue-600/40 text-blue-100`}>Baru</span>
+      case 'Proses': return <span className={`${base} bg-amber-800/30 border-amber-500/40 text-amber-200`}>Proses</span>
+      case 'Selesai': return <span className={`${base} bg-emerald-800/30 border-emerald-600/40 text-emerald-200`}>Selesai</span>
+      default: return <span className={`${base} bg-blue-900/30 border-blue-700/40 text-blue-200`}>{s}</span>
     }
   }
 
@@ -110,19 +110,19 @@ export default function PengaduanPage() {
           <AlertDescription className="text-green-800">{notif}</AlertDescription>
         </Alert>
       )}
-      <Card>
+      <Card className="bg-blue-900/40 border-blue-700/40 backdrop-blur supports-[backdrop-filter]:bg-blue-900/30">
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-xl text-blue-900">Daftar Semua Pengaduan</CardTitle>
+            <CardTitle className="text-xl text-blue-100">Daftar Semua Pengaduan</CardTitle>
             <ExportDropdown onCSV={handleExportCSV} onExcel={handleExportExcel} />
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-2 top-2.5 text-gray-400" />
-              <Input placeholder="Cari ID / Nama / Email" className="pl-8" value={q} onChange={e => setQ(e.target.value)} />
+              <Search className="w-4 h-4 absolute left-2 top-2.5 text-blue-300/60" />
+              <Input placeholder="Cari ID / Nama / Email" className="pl-8 bg-blue-950/40 border-blue-700/40 placeholder:text-blue-300/40 text-blue-50" value={q} onChange={e => setQ(e.target.value)} />
             </div>
             <Select value={statusFilter} onValueChange={v => setStatusFilter(v)}>
-              <SelectTrigger><SelectValue placeholder="Filter Status" /></SelectTrigger>
+              <SelectTrigger className="bg-blue-950/40 border-blue-700/40 text-blue-50"><SelectValue placeholder="Filter Status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Status</SelectItem>
                 <SelectItem value="Baru">Baru</SelectItem>
@@ -131,7 +131,7 @@ export default function PengaduanPage() {
               </SelectContent>
             </Select>
             <Select value={klasifikasiFilter} onValueChange={v => setKlasifikasiFilter(v)}>
-              <SelectTrigger><SelectValue placeholder="Filter Klasifikasi" /></SelectTrigger>
+              <SelectTrigger className="bg-blue-950/40 border-blue-700/40 text-blue-50"><SelectValue placeholder="Filter Klasifikasi" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Klasifikasi</SelectItem>
                 {[...new Set(items.map(i => i.klasifikasi))].map(k => (
@@ -142,32 +142,32 @@ export default function PengaduanPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-md border">
+          <div className="overflow-x-auto rounded-md border border-blue-800/40">
             <Table>
-              <TableHeader className="bg-gray-50 sticky top-0 z-10">
+              <TableHeader className="bg-blue-900/60 sticky top-0 z-10">
                 <TableRow>
-                  <TableHead>No.</TableHead>
-                  <TableHead>Tgl</TableHead>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>No WA</TableHead>
-                  <TableHead>Klasifikasi</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Aksi</TableHead>
+                  <TableHead className="text-blue-100">No.</TableHead>
+                  <TableHead className="text-blue-100">Tgl</TableHead>
+                  <TableHead className="text-blue-100">Nama</TableHead>
+                  <TableHead className="text-blue-100">Email</TableHead>
+                  <TableHead className="text-blue-100">No WA</TableHead>
+                  <TableHead className="text-blue-100">Klasifikasi</TableHead>
+                  <TableHead className="text-blue-100">Status</TableHead>
+                  <TableHead className="text-blue-100">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((c, i) => (
-                  <TableRow key={c.id} className={i % 2 ? 'bg-white' : 'bg-gray-50/50'}>
-                    <TableCell>{i + 1}</TableCell>
-                    <TableCell>{formatDateForExport(c.tanggal)}</TableCell>
-                    <TableCell className="font-medium">{c.nama}</TableCell>
-                    <TableCell>{c.email}</TableCell>
-                    <TableCell>{c.noWA}</TableCell>
-                    <TableCell>{c.klasifikasi}</TableCell>
+                  <TableRow key={c.id} className={i % 2 ? 'bg-blue-900/30' : 'bg-blue-900/10'}>
+                    <TableCell className="text-blue-50">{i + 1}</TableCell>
+                    <TableCell className="text-blue-50">{formatDateForExport(c.tanggal)}</TableCell>
+                    <TableCell className="font-medium text-blue-50">{c.nama}</TableCell>
+                    <TableCell className="text-blue-100/90">{c.email}</TableCell>
+                    <TableCell className="text-blue-100/90">{c.noWA}</TableCell>
+                    <TableCell className="text-blue-100/90">{c.klasifikasi}</TableCell>
                     <TableCell>{badge(c.status)}</TableCell>
                     <TableCell>
-                      <Button size="sm" variant="outline" className="gap-1" onClick={() => { setSelected({ ...c }); setOpen(true) }}>
+                      <Button size="sm" variant="soft" className="gap-1" onClick={() => { setSelected({ ...c }); setOpen(true) }}>
                         <Edit className="w-3 h-3" />Detail
                       </Button>
                     </TableCell>
@@ -187,34 +187,34 @@ export default function PengaduanPage() {
           {selected && (
             <div className="space-y-6">
               <section>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Informasi Pelapor</h4>
+                <h4 className="text-sm font-semibold text-blue-100 mb-2">Informasi Pelapor</h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><span className="block text-gray-500">Nama</span><span className="font-medium">{selected.nama}</span></div>
-                  <div><span className="block text-gray-500">Email</span><span>{selected.email}</span></div>
-                  <div><span className="block text-gray-500">No WA</span><span>{selected.noWA}</span></div>
-                  <div><span className="block text-gray-500">Tanggal</span><span>{formatDateForExport(selected.tanggal)}</span></div>
+                  <div><span className="block text-blue-300/70">Nama</span><span className="font-medium text-blue-50">{selected.nama}</span></div>
+                  <div><span className="block text-blue-300/70">Email</span><span className="text-blue-50">{selected.email}</span></div>
+                  <div><span className="block text-blue-300/70">No WA</span><span className="text-blue-50">{selected.noWA}</span></div>
+                  <div><span className="block text-blue-300/70">Tanggal</span><span className="text-blue-50">{formatDateForExport(selected.tanggal)}</span></div>
                 </div>
               </section>
               <section>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Detail Pengaduan</h4>
+                <h4 className="text-sm font-semibold text-blue-100 mb-2">Detail Pengaduan</h4>
                 <div className="space-y-2 text-sm">
-                  <div><span className="block text-gray-500">Klasifikasi</span><span>{selected.klasifikasi}</span></div>
+                  <div><span className="block text-blue-300/70">Klasifikasi</span><span className="text-blue-50">{selected.klasifikasi}</span></div>
                   <div>
-                    <span className="block text-gray-500 mb-1">Deskripsi</span>
-                    <p className="bg-gray-50 p-3 rounded text-[13px] leading-relaxed whitespace-pre-wrap">{selected.deskripsi}</p>
+                    <span className="block text-blue-300/70 mb-1">Deskripsi</span>
+                    <p className="bg-blue-900/40 border border-blue-800/40 p-3 rounded text-[13px] leading-relaxed whitespace-pre-wrap text-blue-50">{selected.deskripsi}</p>
                   </div>
                 </div>
               </section>
               <section className="space-y-4">
                 <div>
                   <Label htmlFor="rtl">Rencana Tindak Lanjut (RTL)</Label>
-                  <Textarea id="rtl" rows={3} value={selected.rtl} onChange={e => setSelected((p: any) => ({ ...p, rtl: e.target.value }))} className="mt-1" />
+                  <Textarea id="rtl" rows={3} value={selected.rtl} onChange={e => setSelected((p: any) => ({ ...p, rtl: e.target.value }))} className="mt-1 bg-blue-950/40 border-blue-800/40 text-blue-50 placeholder:text-blue-300/40" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Status</Label>
                     <Select value={selected.status} onValueChange={v => setSelected((p: any) => ({ ...p, status: v }))}>
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="mt-1 bg-blue-950/40 border-blue-800/40 text-blue-50"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Baru">Baru</SelectItem>
                         <SelectItem value="Proses">Proses</SelectItem>
@@ -224,12 +224,12 @@ export default function PengaduanPage() {
                   </div>
                   <div>
                     <Label htmlFor="selesai">Tanggal Selesai</Label>
-                    <Input id="selesai" type="date" value={selected.tanggalSelesai} onChange={e => setSelected((p: any) => ({ ...p, tanggalSelesai: e.target.value }))} className="mt-1" />
+                    <Input id="selesai" type="date" value={selected.tanggalSelesai} onChange={e => setSelected((p: any) => ({ ...p, tanggalSelesai: e.target.value }))} className="mt-1 bg-blue-950/40 border-blue-800/40 text-blue-50 placeholder:text-blue-300/40" />
                   </div>
                 </div>
                 <div className="flex gap-3 pt-2">
-                  <Button onClick={save} className="bg-blue-600 hover:bg-blue-700">Simpan</Button>
-                  <Button variant="outline" onClick={sendProgress} className="gap-2"><Send className="w-4 h-4" />Notifikasi</Button>
+                  <Button onClick={save} className="bg-blue-600 hover:bg-blue-500">Simpan</Button>
+                  <Button variant="soft" onClick={sendProgress} className="gap-2"><Send className="w-4 h-4" />Notifikasi</Button>
                 </div>
               </section>
             </div>

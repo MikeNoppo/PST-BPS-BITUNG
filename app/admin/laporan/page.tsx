@@ -22,7 +22,7 @@ const mockMonthlyData = [
     rtl: 'Prosedur telah disederhanakan',
     status: 'Selesai',
     tanggalSelesai: '2024-01-20',
-    notifikasiTerkirim: 'Ya'
+  // notifikasiTerkirim removed
   },
   {
     no: 2,
@@ -35,7 +35,7 @@ const mockMonthlyData = [
     rtl: 'Evaluasi sistem antrian',
     status: 'Proses',
     tanggalSelesai: '-',
-    notifikasiTerkirim: 'Ya'
+  // notifikasiTerkirim removed
   }
 ]
 
@@ -53,7 +53,7 @@ export default function AdminLaporan() {
   const [reportType, setReportType] = useState('monthly')
 
   const exportMonthlyToCSV = () => {
-    const headers = ['No','Tanggal Pengaduan','Nama Pelapor','Email','No WhatsApp','Isi Pengaduan','Klasifikasi','RTL','Status','Tanggal Selesai','Notifikasi Terkirim']
+  const headers = ['No','Tanggal Pengaduan','Nama Pelapor','Email','No WhatsApp','Isi Pengaduan','Klasifikasi','RTL','Status','Tanggal Selesai']
     const monthName = MONTHS.find(m => m.value === selectedMonth)?.label
     exportToCSV(
       mockMonthlyData,
@@ -69,8 +69,7 @@ export default function AdminLaporan() {
         item.klasifikasi,
         item.rtl,
         item.status,
-        item.tanggalSelesai !== '-' ? new Date(item.tanggalSelesai).toLocaleDateString('id-ID') : '-',
-        item.notifikasiTerkirim
+  item.tanggalSelesai !== '-' ? new Date(item.tanggalSelesai).toLocaleDateString('id-ID') : '-'
       ]
     )
   }
@@ -84,7 +83,7 @@ export default function AdminLaporan() {
     )
   }
   const exportMonthlyToExcel = () => {
-    const headers = ['No','Tanggal Pengaduan','Nama Pelapor','Email','No WhatsApp','Isi Pengaduan','Klasifikasi','RTL','Status','Tanggal Selesai','Notifikasi Terkirim']
+  const headers = ['No','Tanggal Pengaduan','Nama Pelapor','Email','No WhatsApp','Isi Pengaduan','Klasifikasi','RTL','Status','Tanggal Selesai']
     const monthName = MONTHS.find(m => m.value === selectedMonth)?.label
     exportToExcel(
       mockMonthlyData,
@@ -100,8 +99,7 @@ export default function AdminLaporan() {
         item.klasifikasi,
         item.rtl,
         item.status,
-        item.tanggalSelesai !== '-' ? new Date(item.tanggalSelesai).toLocaleDateString('id-ID') : '-',
-        item.notifikasiTerkirim
+  item.tanggalSelesai !== '-' ? new Date(item.tanggalSelesai).toLocaleDateString('id-ID') : '-'
       ]
     )
   }
@@ -118,13 +116,13 @@ export default function AdminLaporan() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Baru':
-        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Baru</Badge>
+        return <Badge className="bg-blue-800/40 border border-blue-600/40 text-blue-100 hover:bg-blue-700/50">Baru</Badge>
       case 'Proses':
-        return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Proses</Badge>
+        return <Badge className="bg-amber-800/30 border border-amber-600/40 text-amber-200 hover:bg-amber-700/40">Proses</Badge>
       case 'Selesai':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Selesai</Badge>
+        return <Badge className="bg-emerald-800/30 border border-emerald-600/40 text-emerald-200 hover:bg-emerald-700/40">Selesai</Badge>
       default:
-        return <Badge variant="secondary">{status}</Badge>
+        return <Badge variant="outline" className="border-blue-700 text-blue-100">{status}</Badge>
     }
   }
 
@@ -136,14 +134,14 @@ export default function AdminLaporan() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-blue-900/40 border-blue-700/40">
         <CardHeader className="print:hidden">
-          <CardTitle className="text-2xl text-blue-900">Cetak Laporan</CardTitle>
+          <CardTitle className="text-2xl text-blue-100">Cetak Laporan</CardTitle>
           <div className="flex flex-wrap gap-4 items-end">
             <div>
-              <label className="block text-sm font-medium mb-1">Jenis Laporan</label>
+              <label className="block text-sm font-medium mb-1 text-blue-200">Jenis Laporan</label>
               <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 bg-blue-950/40 border-blue-700/40 text-blue-50">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -154,9 +152,9 @@ export default function AdminLaporan() {
             </div>
             {reportType === 'monthly' && (
               <div>
-                <label className="block text-sm font-medium mb-1">Bulan</label>
+                <label className="block text-sm font-medium mb-1 text-blue-200">Bulan</label>
                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-32 bg-blue-950/40 border-blue-700/40 text-blue-50">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -170,9 +168,9 @@ export default function AdminLaporan() {
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium mb-1">Tahun</label>
+              <label className="block text-sm font-medium mb-1 text-blue-200">Tahun</label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-24">
+                <SelectTrigger className="w-24 bg-blue-950/40 border-blue-700/40 text-blue-50">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -183,7 +181,7 @@ export default function AdminLaporan() {
               </Select>
             </div>
             <div className="flex space-x-2">
-              <Button onClick={handlePrint} variant="outline" className="flex items-center space-x-2">
+              <Button onClick={handlePrint} variant="soft" className="flex items-center space-x-2">
                 <Printer className="w-4 h-4" />
                 <span>Cetak</span>
               </Button>
@@ -213,49 +211,44 @@ export default function AdminLaporan() {
               {reportType === 'monthly' && (
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-blue-900/60">
                       <TableRow>
-                        <TableHead>No.</TableHead>
-                        <TableHead>Tgl Pengaduan</TableHead>
-                        <TableHead>Data Pelapor</TableHead>
-                        <TableHead>Isi Pengaduan</TableHead>
-                        <TableHead>Klasifikasi</TableHead>
-                        <TableHead>RTL</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Tgl Selesai</TableHead>
-                        <TableHead>Notifikasi</TableHead>
+                        <TableHead className="text-blue-100">No.</TableHead>
+                        <TableHead className="text-blue-100">Tgl Pengaduan</TableHead>
+                        <TableHead className="text-blue-100">Data Pelapor</TableHead>
+                        <TableHead className="text-blue-100">Isi Pengaduan</TableHead>
+                        <TableHead className="text-blue-100">Klasifikasi</TableHead>
+                        <TableHead className="text-blue-100">RTL</TableHead>
+                        <TableHead className="text-blue-100">Status</TableHead>
+                        <TableHead className="text-blue-100">Tgl Selesai</TableHead>
+                        {/* Notifikasi column removed */}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {mockMonthlyData.map((item) => (
-                        <TableRow key={item.no}>
-                          <TableCell>{item.no}</TableCell>
-                          <TableCell>{new Date(item.tanggal).toLocaleDateString('id-ID')}</TableCell>
+                        <TableRow key={item.no} className={item.no % 2 ? 'bg-blue-900/30' : 'bg-blue-900/10'}>
+                          <TableCell className="text-blue-50">{item.no}</TableCell>
+                          <TableCell className="text-blue-50">{new Date(item.tanggal).toLocaleDateString('id-ID')}</TableCell>
                           <TableCell>
                             <div className="text-sm">
-                              <div className="font-medium">{item.nama}</div>
-                              <div className="text-gray-500">{item.email}</div>
-                              <div className="text-gray-500">{item.noWA}</div>
+                              <div className="font-medium text-blue-50">{item.nama}</div>
+                              <div className="text-blue-200/80">{item.email}</div>
+                              <div className="text-blue-200/80">{item.noWA}</div>
                             </div>
                           </TableCell>
                           <TableCell className="max-w-xs">
-                            <div className="text-sm truncate" title={item.isiPengaduan}>
+                            <div className="text-sm truncate text-blue-50" title={item.isiPengaduan}>
                               {item.isiPengaduan}
                             </div>
                           </TableCell>
-                          <TableCell>{item.klasifikasi}</TableCell>
+                          <TableCell className="text-blue-100/90">{item.klasifikasi}</TableCell>
                           <TableCell className="max-w-xs">
-                            <div className="text-sm truncate" title={item.rtl}>
+                            <div className="text-sm truncate text-blue-50" title={item.rtl}>
                               {item.rtl}
                             </div>
                           </TableCell>
                           <TableCell>{getStatusBadge(item.status)}</TableCell>
-                          <TableCell>{item.tanggalSelesai !== '-' ? new Date(item.tanggalSelesai).toLocaleDateString('id-ID') : '-'}</TableCell>
-                          <TableCell>
-                            <Badge variant={item.notifikasiTerkirim === 'Ya' ? 'default' : 'secondary'}>
-                              {item.notifikasiTerkirim}
-                            </Badge>
-                          </TableCell>
+                          <TableCell className="text-blue-100/90">{item.tanggalSelesai !== '-' ? new Date(item.tanggalSelesai).toLocaleDateString('id-ID') : '-'}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -267,20 +260,20 @@ export default function AdminLaporan() {
               {reportType === 'annual' && (
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-blue-900/60">
                       <TableRow>
-                        <TableHead>No.</TableHead>
-                        <TableHead>Bulan</TableHead>
-                        <TableHead>Klasifikasi Pengaduan</TableHead>
-                        <TableHead>Status Penanganan</TableHead>
+                        <TableHead className="text-blue-100">No.</TableHead>
+                        <TableHead className="text-blue-100">Bulan</TableHead>
+                        <TableHead className="text-blue-100">Klasifikasi Pengaduan</TableHead>
+                        <TableHead className="text-blue-100">Status Penanganan</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {mockAnnualData.map((item) => (
-                        <TableRow key={item.no}>
-                          <TableCell>{item.no}</TableCell>
-                          <TableCell>{item.bulan}</TableCell>
-                          <TableCell>{item.klasifikasi}</TableCell>
+                        <TableRow key={item.no} className={item.no % 2 ? 'bg-blue-900/30' : 'bg-blue-900/10'}>
+                          <TableCell className="text-blue-50">{item.no}</TableCell>
+                          <TableCell className="text-blue-50">{item.bulan}</TableCell>
+                          <TableCell className="text-blue-100/90">{item.klasifikasi}</TableCell>
                           <TableCell>{getStatusBadge(item.status)}</TableCell>
                         </TableRow>
                       ))}

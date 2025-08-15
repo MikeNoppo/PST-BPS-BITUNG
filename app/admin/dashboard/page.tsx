@@ -42,25 +42,29 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-blue-900 mb-2">Ringkasan Pengaduan</h2>
-        <p className="text-sm text-gray-600">Statistik singkat status pengaduan terbaru.</p>
+        <h2 className="text-2xl font-semibold text-blue-100 mb-2 drop-shadow-sm">Ringkasan Pengaduan</h2>
+        <p className="text-sm text-blue-200/80">Statistik singkat status pengaduan terbaru.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-blue-100">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-500">Total</CardTitle></CardHeader>
-          <CardContent className="text-3xl font-semibold text-blue-700">{total}</CardContent>
+        <Card className="relative bg-gradient-to-br from-blue-900/50 via-blue-900/40 to-blue-800/40 border border-blue-700/40 shadow-sm overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-white/5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-b before:from-white/5 before:to-transparent" />
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-blue-200/70">Total</CardTitle></CardHeader>
+          <CardContent className="text-3xl font-semibold text-blue-200">{total}</CardContent>
         </Card>
-        <Card className="border-blue-100">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-blue-600">Baru</CardTitle></CardHeader>
-          <CardContent className="text-3xl font-semibold">{baru}</CardContent>
+        <Card className="relative bg-gradient-to-br from-blue-900/50 via-blue-900/40 to-blue-800/40 border border-blue-700/40 shadow-sm overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-white/5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-b before:from-white/5 before:to-transparent" />
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-blue-300">Baru</CardTitle></CardHeader>
+          <CardContent className="text-3xl font-semibold text-blue-100">{baru}</CardContent>
         </Card>
-        <Card className="border-orange-100">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-orange-600">Proses</CardTitle></CardHeader>
-          <CardContent className="text-3xl font-semibold text-orange-700">{proses}</CardContent>
+        <Card className="relative bg-gradient-to-br from-blue-900/50 via-blue-900/40 to-blue-800/40 border border-blue-700/40 shadow-sm overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-white/5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-b before:from-white/5 before:to-transparent" />
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-amber-300">Proses</CardTitle></CardHeader>
+          <CardContent className="text-3xl font-semibold text-amber-200">{proses}</CardContent>
         </Card>
-        <Card className="border-green-100">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-green-600">Selesai</CardTitle></CardHeader>
-          <CardContent className="text-3xl font-semibold text-green-700">{selesai}</CardContent>
+        <Card className="relative bg-gradient-to-br from-blue-900/50 via-blue-900/40 to-blue-800/40 border border-blue-700/40 shadow-sm overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-white/5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-b before:from-white/5 before:to-transparent" />
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-emerald-300">Selesai</CardTitle></CardHeader>
+          <CardContent className="text-3xl font-semibold text-emerald-200">{selesai}</CardContent>
         </Card>
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
@@ -74,6 +78,7 @@ export default function AdminDashboard() {
           color="var(--chart-1)"
           shortLabel={(v: string) => v.length > 10 ? v.slice(0,10)+'…' : v}
           formatValue={(v) => v.toString()}
+          className="bg-blue-900/40 border-blue-700/40"
         />
         <HighlightedBarChart
           title="Jumlah Pengaduan Masuk (Tahun Berjalan)"
@@ -85,6 +90,7 @@ export default function AdminDashboard() {
           color="var(--chart-2)"
           shortLabel={(v: string) => v}
           formatValue={(v) => v.toString()}
+          className="bg-blue-900/40 border-blue-700/40"
         />
       </div>
     </div>

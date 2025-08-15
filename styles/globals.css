@@ -44,6 +44,42 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+  /* Admin area themed to match landing page deep blue palette */
+  .admin-theme {
+    /* Deep navy gradient background foundation */
+    --background: 226 47% 11%; /* approx blue-950 */
+    --foreground: 210 40% 98%;
+    --card: 221 39% 16%; /* dark navy card */
+    --card-foreground: 210 40% 96%;
+    --popover: 226 47% 14%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 221 83% 53%; /* blue-600 */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 221 69% 25%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 221 39% 18%;
+    --muted-foreground: 220 15% 70%;
+    --accent: 221 67% 22%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 221 39% 28%;
+    --input: 221 39% 28%;
+    --ring: 221 83% 53%;
+    --chart-1: 221 83% 53%;
+    --chart-2: 199 89% 48%;
+    --chart-3: 160 83% 45%;
+    --chart-4: 43 90% 60%;
+    --chart-5: 27 96% 61%;
+    --sidebar-background: 221 39% 16%; /* blue-900 */
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 221 67% 22%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 221 39% 28%;
+    --sidebar-ring: 221 83% 53%;
+  }
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;

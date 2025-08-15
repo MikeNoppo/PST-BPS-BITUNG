@@ -20,6 +20,7 @@ export interface HighlightedBarChartProps<T = any> {
   patternId?: string
   shortLabel?: (raw: any) => string
   formatValue?: (v: number) => string
+  className?: string
 }
 
 export function HighlightedBarChart<T extends Record<string, any>>({
@@ -33,7 +34,8 @@ export function HighlightedBarChart<T extends Record<string, any>>({
   color = 'var(--chart-1)',
   patternId = 'highlighted-pattern-dots',
   shortLabel = (v: any) => (typeof v === 'string' ? v.slice(0, 3) : v),
-  formatValue = (v: number) => v.toString()
+  formatValue = (v: number) => v.toString(),
+  className
 }: HighlightedBarChartProps<T>) {
   const [activeIndex, setActiveIndex] = React.useState<number | null>(null)
 
@@ -44,7 +46,8 @@ export function HighlightedBarChart<T extends Record<string, any>>({
   }
 
   return (
-    <Card>
+  <Card className={className}
+  >
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           {title}
@@ -70,7 +73,13 @@ export function HighlightedBarChart<T extends Record<string, any>>({
             </defs>
             <XAxis dataKey={xKey} tickLine={false} tickMargin={10} axisLine={false} tickFormatter={shortLabel as any} />
             <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-            <Bar dataKey={yKey} radius={4} fill="var(--color-series)">
+            <defs>
+              <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--color-series, hsl(199 89% 60%))" stopOpacity={0.95} />
+                <stop offset="100%" stopColor="var(--color-series, hsl(199 89% 55%))" stopOpacity={0.65} />
+              </linearGradient>
+            </defs>
+            <Bar dataKey={yKey} radius={4} fill="url(#barGradient)">
               {data.map((_, index) => (
                 <Cell
                   className="duration-200"
@@ -89,7 +98,7 @@ export function HighlightedBarChart<T extends Record<string, any>>({
 }
 
 const DottedBackgroundPattern = ({ id }: { id: string }) => (
-  <pattern id={id} x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
-    <circle className="dark:text-muted/40 text-muted" cx="2" cy="2" r="1" fill="currentColor" />
+  <pattern id={id} x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse">
+    <circle className="text-blue-300/10" cx="2" cy="2" r="1.5" fill="currentColor" />
   </pattern>
 )
