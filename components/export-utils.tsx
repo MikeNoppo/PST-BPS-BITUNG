@@ -1,4 +1,24 @@
-'use client'
+"use client"
+
+import { Download } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+
+// Shared month list for report pages
+export const MONTHS = [
+  { value: '01', label: 'Januari' },
+  { value: '02', label: 'Februari' },
+  { value: '03', label: 'Maret' },
+  { value: '04', label: 'April' },
+  { value: '05', label: 'Mei' },
+  { value: '06', label: 'Juni' },
+  { value: '07', label: 'Juli' },
+  { value: '08', label: 'Agustus' },
+  { value: '09', label: 'September' },
+  { value: '10', label: 'Oktober' },
+  { value: '11', label: 'November' },
+  { value: '12', label: 'Desember' }
+]
 
 export const exportToCSV = (data: any[], headers: string[], filename: string, dataMapper: (item: any, index: number) => any[]) => {
   const csvContent = [
@@ -61,4 +81,19 @@ export const escapeCSVField = (field: string) => {
   return field.includes(',') || field.includes('"') || field.includes('\n') 
     ? `"${field.replace(/"/g, '""')}"` 
     : field
+}
+
+// Generic dropdown component for CSV / Excel export actions
+export function ExportDropdown({ onCSV, onExcel, size = 'sm', label = 'Export' }: { onCSV: () => void; onExcel: () => void; size?: 'sm' | 'default'; label?: string }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size={size} className="gap-2"><Download className="w-4 h-4" />{label}</Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuItem onClick={onCSV} className="cursor-pointer">CSV</DropdownMenuItem>
+        <DropdownMenuItem onClick={onExcel} className="cursor-pointer">Excel</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }

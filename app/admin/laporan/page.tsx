@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Printer, Download } from 'lucide-react'
+import { Printer } from 'lucide-react'
+import { ExportDropdown, MONTHS, exportToCSV, exportToExcel } from '@/components/export-utils'
 
 // Mock data for reports
 const mockMonthlyData = [
@@ -52,167 +53,66 @@ export default function AdminLaporan() {
   const [reportType, setReportType] = useState('monthly')
 
   const exportMonthlyToCSV = () => {
-    const headers = [
-      'No',
-      'Tanggal Pengaduan',
-      'Nama Pelapor',
-      'Email',
-      'No WhatsApp',
-      'Isi Pengaduan',
-      'Klasifikasi',
-      'RTL',
-      'Status',
-      'Tanggal Selesai',
-      'Notifikasi Terkirim'
-    ]
-    
-    const csvContent = [
-      headers.join(','),
-      ...mockMonthlyData.map((item) => [
+    const headers = ['No','Tanggal Pengaduan','Nama Pelapor','Email','No WhatsApp','Isi Pengaduan','Klasifikasi','RTL','Status','Tanggal Selesai','Notifikasi Terkirim']
+    const monthName = MONTHS.find(m => m.value === selectedMonth)?.label
+    exportToCSV(
+      mockMonthlyData,
+      headers,
+      `laporan-bulanan-${monthName}-${selectedYear}.csv`,
+      (item) => [
         item.no,
         new Date(item.tanggal).toLocaleDateString('id-ID'),
-        `"${item.nama}"`,
+        item.nama,
         item.email,
         item.noWA,
-        `"${item.isiPengaduan.replace(/"/g, '""')}"`,
-        `"${item.klasifikasi}"`,
-        `"${item.rtl.replace(/"/g, '""')}"`,
+        item.isiPengaduan,
+        item.klasifikasi,
+        item.rtl,
         item.status,
         item.tanggalSelesai !== '-' ? new Date(item.tanggalSelesai).toLocaleDateString('id-ID') : '-',
         item.notifikasiTerkirim
-      ].join(','))
-    ].join('\n')
-    
-    const monthName = months.find(m => m.value === selectedMonth)?.label
-    const filename = `laporan-bulanan-${monthName}-${selectedYear}.csv`
-    
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', filename)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+      ]
+    )
   }
-
   const exportAnnualToCSV = () => {
-    const headers = ['No', 'Bulan', 'Klasifikasi Pengaduan', 'Status Penanganan']
-    
-    const csvContent = [
-      headers.join(','),
-      ...mockAnnualData.map((item) => [
-        item.no,
-        item.bulan,
-        `"${item.klasifikasi}"`,
-        item.status
-      ].join(','))
-    ].join('\n')
-    
-    const filename = `laporan-tahunan-${selectedYear}.csv`
-    
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', filename)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const headers = ['No','Bulan','Klasifikasi Pengaduan','Status Penanganan']
+    exportToCSV(
+      mockAnnualData,
+      headers,
+      `laporan-tahunan-${selectedYear}.csv`,
+      (item) => [item.no, item.bulan, item.klasifikasi, item.status]
+    )
   }
-
   const exportMonthlyToExcel = () => {
-    const headers = [
-      'No',
-      'Tanggal Pengaduan',
-      'Nama Pelapor',
-      'Email',
-      'No WhatsApp',
-      'Isi Pengaduan',
-      'Klasifikasi',
-      'RTL',
-      'Status',
-      'Tanggal Selesai',
-      'Notifikasi Terkirim'
-    ]
-    
-    let excelContent = `
-      <table border="1">
-        <thead>
-          <tr style="background-color: #3b82f6; color: white;">
-            ${headers.map(header => `<th>${header}</th>`).join('')}
-          </tr>
-        </thead>
-        <tbody>
-          ${mockMonthlyData.map((item) => `
-            <tr>
-              <td>${item.no}</td>
-              <td>${new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-              <td>${item.nama}</td>
-              <td>${item.email}</td>
-              <td>${item.noWA}</td>
-              <td>${item.isiPengaduan}</td>
-              <td>${item.klasifikasi}</td>
-              <td>${item.rtl}</td>
-              <td>${item.status}</td>
-              <td>${item.tanggalSelesai !== '-' ? new Date(item.tanggalSelesai).toLocaleDateString('id-ID') : '-'}</td>
-              <td>${item.notifikasiTerkirim}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `
-    
-    const monthName = months.find(m => m.value === selectedMonth)?.label
-    const filename = `laporan-bulanan-${monthName}-${selectedYear}.xls`
-    
-    const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', filename)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const headers = ['No','Tanggal Pengaduan','Nama Pelapor','Email','No WhatsApp','Isi Pengaduan','Klasifikasi','RTL','Status','Tanggal Selesai','Notifikasi Terkirim']
+    const monthName = MONTHS.find(m => m.value === selectedMonth)?.label
+    exportToExcel(
+      mockMonthlyData,
+      headers,
+      `laporan-bulanan-${monthName}-${selectedYear}.xls`,
+      (item) => [
+        item.no,
+        new Date(item.tanggal).toLocaleDateString('id-ID'),
+        item.nama,
+        item.email,
+        item.noWA,
+        item.isiPengaduan,
+        item.klasifikasi,
+        item.rtl,
+        item.status,
+        item.tanggalSelesai !== '-' ? new Date(item.tanggalSelesai).toLocaleDateString('id-ID') : '-',
+        item.notifikasiTerkirim
+      ]
+    )
   }
-
   const exportAnnualToExcel = () => {
-    const headers = ['No', 'Bulan', 'Klasifikasi Pengaduan', 'Status Penanganan']
-    
-    let excelContent = `
-      <table border="1">
-        <thead>
-          <tr style="background-color: #3b82f6; color: white;">
-            ${headers.map(header => `<th>${header}</th>`).join('')}
-          </tr>
-        </thead>
-        <tbody>
-          ${mockAnnualData.map((item) => `
-            <tr>
-              <td>${item.no}</td>
-              <td>${item.bulan}</td>
-              <td>${item.klasifikasi}</td>
-              <td>${item.status}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `
-    
-    const filename = `laporan-tahunan-${selectedYear}.xls`
-    
-    const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', filename)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const headers = ['No','Bulan','Klasifikasi Pengaduan','Status Penanganan']
+    exportToExcel(
+      mockAnnualData,
+      headers,
+      `laporan-tahunan-${selectedYear}.xls`,
+      (item) => [item.no, item.bulan, item.klasifikasi, item.status]
+    )
   }
 
   const getStatusBadge = (status: string) => {
@@ -232,20 +132,7 @@ export default function AdminLaporan() {
     window.print()
   }
 
-  const months = [
-    { value: '01', label: 'Januari' },
-    { value: '02', label: 'Februari' },
-    { value: '03', label: 'Maret' },
-    { value: '04', label: 'April' },
-    { value: '05', label: 'Mei' },
-    { value: '06', label: 'Juni' },
-    { value: '07', label: 'Juli' },
-    { value: '08', label: 'Agustus' },
-    { value: '09', label: 'September' },
-    { value: '10', label: 'Oktober' },
-    { value: '11', label: 'November' },
-    { value: '12', label: 'Desember' }
-  ]
+  const months = MONTHS
 
   return (
     <div className="space-y-6">
@@ -300,21 +187,10 @@ export default function AdminLaporan() {
                 <Printer className="w-4 h-4" />
                 <span>Cetak</span>
               </Button>
-              <Button
-                onClick={reportType === 'monthly' ? exportMonthlyToCSV : exportAnnualToCSV}
-                variant="outline"
-                className="flex items-center space-x-2"
-              >
-                <Download className="w-4 h-4" />
-                <span>CSV</span>
-              </Button>
-              <Button
-                onClick={reportType === 'monthly' ? exportMonthlyToExcel : exportAnnualToExcel}
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
-              >
-                <Download className="w-4 h-4" />
-                <span>Excel</span>
-              </Button>
+              <ExportDropdown
+                onCSV={reportType === 'monthly' ? exportMonthlyToCSV : exportAnnualToCSV}
+                onExcel={reportType === 'monthly' ? exportMonthlyToExcel : exportAnnualToExcel}
+              />
             </div>
           </div>
         </CardHeader>

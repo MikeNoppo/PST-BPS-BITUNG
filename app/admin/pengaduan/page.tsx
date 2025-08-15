@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Edit, Send, Download, Search, CheckCircle } from 'lucide-react'
-import { exportToCSV, exportToExcel, formatDateForExport } from '@/components/export-utils'
+import { exportToCSV, exportToExcel, formatDateForExport, ExportDropdown } from '@/components/export-utils'
 
 const MOCK = [
   { id: 'PGD001', tanggal: '2024-01-15', nama: 'Ahmad Wijaya', email: 'ahmad@email.com', noWA: '08123456789', klasifikasi: 'Prosedur Layanan', status: 'Selesai', deskripsi: 'Prosedur pelayanan terlalu rumit dan memakan waktu lama', rtl: 'Prosedur telah disederhanakan dan waktu pelayanan dipercepat', tanggalSelesai: '2024-01-20' },
@@ -114,10 +114,7 @@ export default function PengaduanPage() {
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <CardTitle className="text-xl text-blue-900">Daftar Semua Pengaduan</CardTitle>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-2"><Download className="w-4 h-4" />CSV</Button>
-              <Button variant="outline" size="sm" onClick={handleExportExcel} className="gap-2"><Download className="w-4 h-4" />Excel</Button>
-            </div>
+            <ExportDropdown onCSV={handleExportCSV} onExcel={handleExportExcel} />
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <div className="relative">
