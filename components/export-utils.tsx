@@ -1,6 +1,7 @@
 "use client"
 
-import { Download } from 'lucide-react'
+import { Download, Loader2 } from 'lucide-react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
@@ -84,15 +85,62 @@ export const escapeCSVField = (field: string) => {
 }
 
 // Generic dropdown component for CSV / Excel export actions
-export function ExportDropdown({ onCSV, onExcel, size = 'sm', label = 'Export' }: { onCSV: () => void; onExcel: () => void; size?: 'sm' | 'default'; label?: string }) {
+export function ExportDropdown({
+  onCSV,
+  onExcel,
+  size = 'sm',
+  label = 'Export',
+  count,
+  largeThreshold = 5000
+}: {
+  onCSV: () => Promise<void> | void
+  onExcel: () => Promise<void> | void
+  size?: 'sm' | 'default'
+  label?: string
+  count?: number
+  largeThreshold?: number
+}) {
+  const [loading, setLoading] = useState<'csv' | 'excel' | null>(null)
+  const isLarge = typeof count === 'number' && count >= largeThreshold
+
+  const wrap = async (type: 'csv' | 'excel', fn: () => Promise<void> | void) => {
+    try {
+      setLoading(type)
+      await fn()
+    } finally {
+  setLoading((l: 'csv' | 'excel' | null) => (l === type ? null : l))
+    }
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size={size} className="gap-2"><Download className="w-4 h-4" />{label}</Button>
+        <Button variant="outline" size={size} className="gap-2" disabled={!!loading}>
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          {loading ? 'Memproses...' : label}
+          {isLarge && !loading && <span className="text-[10px] font-medium text-orange-600 border border-orange-200 bg-orange-50 px-1 py-0.5 rounded">Besar</span>}
+        </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuItem onClick={onCSV} className="cursor-pointer">CSV</DropdownMenuItem>
-        <DropdownMenuItem onClick={onExcel} className="cursor-pointer">Excel</DropdownMenuItem>
+      <DropdownMenuContent align="end" className="w-48">
+        {isLarge && (
+          <div className="px-2 py-1.5 text-[11px] text-orange-700 bg-orange-50 rounded-sm mb-1 leading-snug">
+            Dataset besar, mungkin butuh beberapa detik.
+          </div>
+        )}
+        <DropdownMenuItem
+          disabled={!!loading}
+          onClick={() => wrap('csv', () => onCSV())}
+          className="cursor-pointer"
+        >
+          {loading === 'csv' && <Loader2 className="w-3 h-3 animate-spin" />} CSV
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={!!loading}
+          onClick={() => wrap('excel', () => onExcel())}
+          className="cursor-pointer"
+        >
+          {loading === 'excel' && <Loader2 className="w-3 h-3 animate-spin" />} Excel
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
