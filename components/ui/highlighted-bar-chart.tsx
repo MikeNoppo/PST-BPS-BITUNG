@@ -49,7 +49,7 @@ export function HighlightedBarChart<T extends Record<string, any>>({
   <Card className={className}
   >
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-blue-100">
           {title}
           {typeof growthPercent === 'number' && (
             <Badge variant="outline" className={growthPercent >= 0 ? 'text-green-500 bg-green-500/10 border-none' : 'text-red-500 bg-red-500/10 border-none'}>
@@ -58,7 +58,7 @@ export function HighlightedBarChart<T extends Record<string, any>>({
             </Badge>
           )}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-blue-300/70">
           {activeData
             ? `${activeData[xKey]}: ${formatValue(Number(activeData[yKey]))}`
             : description || ''}
