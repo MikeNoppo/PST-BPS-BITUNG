@@ -1,15 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useSession, signOut } from 'next-auth/react'
-import Link from 'next/link'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { LogOut, FileText, BarChart3, Printer, Download } from 'lucide-react'
+import { Printer, Download } from 'lucide-react'
 
 // Mock data for reports
 const mockMonthlyData = [
@@ -50,11 +47,9 @@ const mockAnnualData = [
 ]
 
 export default function AdminLaporan() {
-  const { status } = useSession()
   const [selectedMonth, setSelectedMonth] = useState('01')
   const [selectedYear, setSelectedYear] = useState('2024')
   const [reportType, setReportType] = useState('monthly')
-  const router = useRouter()
 
   const exportMonthlyToCSV = () => {
     const headers = [
@@ -220,17 +215,6 @@ export default function AdminLaporan() {
     document.body.removeChild(link)
   }
 
-  // Session status sudah di-handle oleh middleware + useSession.
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/admin/login')
-    }
-  }, [status, router])
-
-  const handleLogout = async () => {
-    await signOut({ callbackUrl: '/admin/login' })
-  }
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Baru':
@@ -264,118 +248,77 @@ export default function AdminLaporan() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b print:hidden">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-blue-900">
-              Admin Dashboard - PST BPS Kota Bitung
-            </h1>
-    <Button onClick={handleLogout} variant="outline" className="flex items-center space-x-2">
-              <LogOut className="w-4 h-4" />
-              <span>Logout</span>
-            </Button>
-          </div>
-        </div>
-      </header>
-  {status === 'loading' && <div className="p-6">Memuat sesi...</div>}
-
-      <div className="flex">
-        {/* Sidebar */}
-        <aside className="w-64 bg-white shadow-sm min-h-screen print:hidden">
-          <nav className="p-4 space-y-2">
-            <Link href="/admin/dashboard" className="flex items-center space-x-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md">
-              <BarChart3 className="w-5 h-5" />
-              <span>Dashboard</span>
-            </Link>
-            <Link href="/admin/laporan" className="flex items-center space-x-3 px-3 py-2 bg-blue-50 text-blue-700 rounded-md">
-              <FileText className="w-5 h-5" />
-              <span>Laporan</span>
-            </Link>
-          </nav>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 p-6">
-          <Card>
-            <CardHeader className="print:hidden">
-              <CardTitle className="text-2xl text-blue-900">Cetak Laporan</CardTitle>
-              
-              {/* Report Controls */}
-              <div className="flex flex-wrap gap-4 items-end">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Jenis Laporan</label>
-                  <Select value={reportType} onValueChange={setReportType}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">Laporan Bulanan</SelectItem>
-                      <SelectItem value="annual">Laporan Tahunan</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {reportType === 'monthly' && (
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Bulan</label>
-                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {months.map(month => (
-                          <SelectItem key={month.value} value={month.value}>
-                            {month.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">Tahun</label>
-                  <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2024">2024</SelectItem>
-                      <SelectItem value="2023">2023</SelectItem>
-                      <SelectItem value="2022">2022</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex space-x-2">
-                  <Button onClick={handlePrint} variant="outline" className="flex items-center space-x-2">
-                    <Printer className="w-4 h-4" />
-                    <span>Cetak</span>
-                  </Button>
-                  
-                  <Button 
-                    onClick={reportType === 'monthly' ? exportMonthlyToCSV : exportAnnualToCSV}
-                    variant="outline" 
-                    className="flex items-center space-x-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>CSV</span>
-                  </Button>
-                  
-                  <Button 
-                    onClick={reportType === 'monthly' ? exportMonthlyToExcel : exportAnnualToExcel}
-                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Excel</span>
-                  </Button>
-                </div>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="print:hidden">
+          <CardTitle className="text-2xl text-blue-900">Cetak Laporan</CardTitle>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium mb-1">Jenis Laporan</label>
+              <Select value={reportType} onValueChange={setReportType}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Laporan Bulanan</SelectItem>
+                  <SelectItem value="annual">Laporan Tahunan</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {reportType === 'monthly' && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Bulan</label>
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {months.map(month => (
+                      <SelectItem key={month.value} value={month.value}>
+                        {month.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </CardHeader>
-
-            <CardContent>
+            )}
+            <div>
+              <label className="block text-sm font-medium mb-1">Tahun</label>
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2024">2024</SelectItem>
+                  <SelectItem value="2023">2023</SelectItem>
+                  <SelectItem value="2022">2022</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex space-x-2">
+              <Button onClick={handlePrint} variant="outline" className="flex items-center space-x-2">
+                <Printer className="w-4 h-4" />
+                <span>Cetak</span>
+              </Button>
+              <Button
+                onClick={reportType === 'monthly' ? exportMonthlyToCSV : exportAnnualToCSV}
+                variant="outline"
+                className="flex items-center space-x-2"
+              >
+                <Download className="w-4 h-4" />
+                <span>CSV</span>
+              </Button>
+              <Button
+                onClick={reportType === 'monthly' ? exportMonthlyToExcel : exportAnnualToExcel}
+                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+              >
+                <Download className="w-4 h-4" />
+                <span>Excel</span>
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
               {/* Report Header for Print */}
               <div className="hidden print:block mb-6 text-center">
                 <h1 className="text-2xl font-bold text-blue-900 mb-2">
@@ -483,10 +426,8 @@ export default function AdminLaporan() {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
