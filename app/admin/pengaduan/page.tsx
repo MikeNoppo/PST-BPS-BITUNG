@@ -180,39 +180,40 @@ export default function PengaduanPage() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        {/* Adjusted dialog styling for better contrast (previously white background with very light text) */}
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-blue-950/90 border border-blue-800/60 backdrop-blur-md text-blue-50">
           <DialogHeader>
-            <DialogTitle>Detail Pengaduan - {selected?.id}</DialogTitle>
+            <DialogTitle className="text-blue-50">Detail Pengaduan - {selected?.id}</DialogTitle>
           </DialogHeader>
           {selected && (
             <div className="space-y-6">
               <section>
-                <h4 className="text-sm font-semibold text-blue-100 mb-2">Informasi Pelapor</h4>
+                <h4 className="text-sm font-semibold text-blue-200 mb-2">Informasi Pelapor</h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><span className="block text-blue-300/70">Nama</span><span className="font-medium text-blue-50">{selected.nama}</span></div>
-                  <div><span className="block text-blue-300/70">Email</span><span className="text-blue-50">{selected.email}</span></div>
-                  <div><span className="block text-blue-300/70">No WA</span><span className="text-blue-50">{selected.noWA}</span></div>
-                  <div><span className="block text-blue-300/70">Tanggal</span><span className="text-blue-50">{formatDateForExport(selected.tanggal)}</span></div>
+                  <div><span className="block text-blue-300">Nama</span><span className="font-medium text-blue-50">{selected.nama}</span></div>
+                  <div><span className="block text-blue-300">Email</span><span className="text-blue-50">{selected.email}</span></div>
+                  <div><span className="block text-blue-300">No WA</span><span className="text-blue-50">{selected.noWA}</span></div>
+                  <div><span className="block text-blue-300">Tanggal</span><span className="text-blue-50">{formatDateForExport(selected.tanggal)}</span></div>
                 </div>
               </section>
               <section>
-                <h4 className="text-sm font-semibold text-blue-100 mb-2">Detail Pengaduan</h4>
+                <h4 className="text-sm font-semibold text-blue-200 mb-2">Detail Pengaduan</h4>
                 <div className="space-y-2 text-sm">
-                  <div><span className="block text-blue-300/70">Klasifikasi</span><span className="text-blue-50">{selected.klasifikasi}</span></div>
+                  <div><span className="block text-blue-300">Klasifikasi</span><span className="text-blue-50">{selected.klasifikasi}</span></div>
                   <div>
-                    <span className="block text-blue-300/70 mb-1">Deskripsi</span>
+                    <span className="block text-blue-300 mb-1">Deskripsi</span>
                     <p className="bg-blue-900/40 border border-blue-800/40 p-3 rounded text-[13px] leading-relaxed whitespace-pre-wrap text-blue-50">{selected.deskripsi}</p>
                   </div>
                 </div>
               </section>
               <section className="space-y-4">
                 <div>
-                  <Label htmlFor="rtl">Rencana Tindak Lanjut (RTL)</Label>
+                  <Label htmlFor="rtl" className="text-blue-200">Rencana Tindak Lanjut (RTL)</Label>
                   <Textarea id="rtl" rows={3} value={selected.rtl} onChange={e => setSelected((p: any) => ({ ...p, rtl: e.target.value }))} className="mt-1 bg-blue-950/40 border-blue-800/40 text-blue-50 placeholder:text-blue-300/40" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Status</Label>
+                    <Label className="text-blue-200">Status</Label>
                     <Select value={selected.status} onValueChange={v => setSelected((p: any) => ({ ...p, status: v }))}>
                       <SelectTrigger className="mt-1 bg-blue-950/40 border-blue-800/40 text-blue-50"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -223,7 +224,7 @@ export default function PengaduanPage() {
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="selesai">Tanggal Selesai</Label>
+                    <Label htmlFor="selesai" className="text-blue-200">Tanggal Selesai</Label>
                     <Input id="selesai" type="date" value={selected.tanggalSelesai} onChange={e => setSelected((p: any) => ({ ...p, tanggalSelesai: e.target.value }))} className="mt-1 bg-blue-950/40 border-blue-800/40 text-blue-50 placeholder:text-blue-300/40" />
                   </div>
                 </div>
