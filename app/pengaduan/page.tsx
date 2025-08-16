@@ -127,7 +127,20 @@ export default function BuatPengaduan() {
       })
       if (!res.ok) {
         const err = await res.json().catch(()=>({}))
-        setServerError(err?.error === 'VALIDATION_ERROR' ? 'Validasi gagal, periksa isian.' : 'Gagal mengirim pengaduan')
+        if (res.status === 429) {
+          const code = err?.error
+          const rateMessages: Record<string,string> = {
+            RATE_LIMIT_IP_SHORT: 'Terlalu banyak percobaan dari IP Anda dalam 10 menit terakhir. Silakan coba lagi beberapa menit lagi.',
+            RATE_LIMIT_IP_DAILY: 'Batas harian pengiriman dari IP ini sudah tercapai. Coba lagi besok.',
+            RATE_LIMIT_EMAIL: 'Terlalu banyak pengiriman menggunakan email ini dalam 1 jam terakhir. Mohon tunggu sebelum mencoba kembali.',
+            DUPLICATE_CONTENT: 'Konten pengaduan identik telah dikirim baru-baru ini. Ubah/redaksi ulang deskripsi bila ingin menambahkan detail.'
+          }
+            setServerError(err?.message || rateMessages[code] || 'Anda sedang dibatasi sementara. Coba lagi nanti.')
+        } else if (err?.error === 'VALIDATION_ERROR') {
+          setServerError('Validasi gagal, periksa kembali isian Anda.')
+        } else {
+          setServerError('Gagal mengirim pengaduan')
+        }
         setSubmitState('error')
         return
       }

@@ -3,6 +3,110 @@ import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 
+// ------------------ Rate Limiting & Anti-Spam ------------------
+// In-memory store (will reset on redeploy / server restart). Cukup sebagai lapisan proteksi dasar.
+// Jika ingin persisten/distribusi multi-instance, gunakan Redis / Upstash.
+
+interface SubmissionMeta {
+  t: number // timestamp ms
+  email: string
+  hash: string // hash ringkas deskripsi
+}
+
+interface RateStore {
+  perIp: Record<string, number[]> // daftar timestamp untuk IP
+  perEmail: Record<string, number[]>
+  recent: SubmissionMeta[] // sliding window untuk deduplikasi konten
+  lastCleanup: number
+}
+
+const RL_WINDOW_SHORT_MS = 10 * 60 * 1000 // 10 menit
+const RL_LIMIT_PER_IP_SHORT = 5
+const RL_WINDOW_LONG_MS = 24 * 60 * 60 * 1000 // 24 jam
+const RL_LIMIT_PER_IP_LONG = 20
+const RL_WINDOW_EMAIL_MS = 60 * 60 * 1000 // 1 jam
+const RL_LIMIT_PER_EMAIL = 3
+const DUP_WINDOW_MS = 30 * 60 * 1000 // 30 menit untuk deteksi duplikat konten
+
+// Attach ke globalThis agar bertahan antar hot-reload (development) / reuse (server runtime)
+const g = globalThis as any
+if (!g.__complaintRateStore) {
+  g.__complaintRateStore = { perIp: {}, perEmail: {}, recent: [], lastCleanup: Date.now() } as RateStore
+}
+const rateStore: RateStore = g.__complaintRateStore
+
+function hashContent(s: string): string {
+  let h = 0
+  for (let i = 0; i < s.length; i++) {
+    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0
+  }
+  return h.toString(36)
+}
+
+function cleanup(now: number) {
+  if (now - rateStore.lastCleanup < 60 * 1000) return // max 1x per menit
+  const cutoffLongest = now - RL_WINDOW_LONG_MS
+  for (const key of Object.keys(rateStore.perIp)) {
+    rateStore.perIp[key] = rateStore.perIp[key].filter(ts => ts >= cutoffLongest)
+    if (!rateStore.perIp[key].length) delete rateStore.perIp[key]
+  }
+  const cutoffEmail = now - RL_WINDOW_EMAIL_MS
+  for (const key of Object.keys(rateStore.perEmail)) {
+    rateStore.perEmail[key] = rateStore.perEmail[key].filter(ts => ts >= cutoffEmail)
+    if (!rateStore.perEmail[key].length) delete rateStore.perEmail[key]
+  }
+  const cutoffDup = now - DUP_WINDOW_MS
+  rateStore.recent = rateStore.recent.filter(r => r.t >= cutoffDup)
+  rateStore.lastCleanup = now
+}
+
+function checkAndRecordLimits(ip: string, email: string, description: string): { ok: boolean; code?: string; message?: string } {
+  const now = Date.now()
+  cleanup(now)
+
+  const ipArr = rateStore.perIp[ip] || (rateStore.perIp[ip] = [])
+  const emailArr = rateStore.perEmail[email] || (rateStore.perEmail[email] = [])
+
+  // Filter window-specific arrays (lazy prune)
+  const shortCut = now - RL_WINDOW_SHORT_MS
+  const longCut = now - RL_WINDOW_LONG_MS
+  const emailCut = now - RL_WINDOW_EMAIL_MS
+  let shortCount = 0
+  let longCount = 0
+  rateStore.perIp[ip] = ipArr.filter(ts => {
+    if (ts >= shortCut) shortCount++
+    if (ts >= longCut) longCount++
+    return ts >= longCut
+  })
+  let emailCount = 0
+  rateStore.perEmail[email] = emailArr.filter(ts => { if (ts >= emailCut) emailCount++; return ts >= emailCut })
+
+  if (shortCount >= RL_LIMIT_PER_IP_SHORT) {
+    return { ok: false, code: 'RATE_LIMIT_IP_SHORT', message: 'Terlalu banyak percobaan dari IP Anda dalam 10 menit. Coba lagi nanti.' }
+  }
+  if (longCount >= RL_LIMIT_PER_IP_LONG) {
+    return { ok: false, code: 'RATE_LIMIT_IP_DAILY', message: 'Batas harian pengiriman dari IP ini tercapai.' }
+  }
+  if (emailCount >= RL_LIMIT_PER_EMAIL) {
+    return { ok: false, code: 'RATE_LIMIT_EMAIL', message: 'Batas pengiriman untuk email ini tercapai untuk 1 jam terakhir.' }
+  }
+
+  // Duplicate content check (same email OR same IP + hash deskripsi)
+  const normalized = description.trim().toLowerCase().replace(/\s+/g, ' ')
+  const h = hashContent(normalized)
+  const duplicate = rateStore.recent.find(r => r.hash === h && (r.email === email || ip === ip))
+  if (duplicate) {
+    return { ok: false, code: 'DUPLICATE_CONTENT', message: 'Konten pengaduan identik telah dikirim baru-baru ini.' }
+  }
+
+  // Record
+  rateStore.perIp[ip].push(now)
+  rateStore.perEmail[email].push(now)
+  rateStore.recent.push({ t: now, email, hash: h })
+  return { ok: true }
+}
+// ---------------------------------------------------------------
+
 // Zod schema mirroring client side
 const complaintSchema = z.object({
   namaLengkap: z.string().min(3).max(150),
@@ -51,6 +155,12 @@ export async function POST(req: Request) {
     if (hp_field) {
       // honeypot triggered
       return NextResponse.json({ error: 'INVALID_REQUEST' }, { status: 400 })
+    }
+    // Rate limiting & Anti-Spam
+    const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown'
+    const rl = checkAndRecordLimits(ip, data.email, data.deskripsi)
+    if (!rl.ok) {
+      return NextResponse.json({ error: rl.code, message: rl.message }, { status: 429 })
     }
     const code = await createUniqueCode()
     const complaint = await prisma.complaint.create({
