@@ -10,8 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Edit, Send, Search, CheckCircle, Trash2 } from 'lucide-react'
+import { Edit, Send, Search, Trash2 } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog'
 import { exportToCSV, exportToExcel, formatDateForExport, ExportDropdown } from '@/components/export-utils'
 
@@ -56,7 +56,6 @@ export default function PengaduanPage() {
   }, [page])
   const [selected, setSelected] = useState<any>(null)
   const [open, setOpen] = useState(false)
-  const [notif, setNotif] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [q, setQ] = useState('')
   // Use undefined sentinel via empty string mapping for 'all'
@@ -87,7 +86,7 @@ export default function PengaduanPage() {
       c.rtl,
       formatDateForExport(c.tanggalSelesai)
     ])
-    toast('Data diekspor (CSV)')
+  toast({ title: 'Export', description: 'Data diekspor (CSV)' })
   }
 
   const handleExportExcel = () => {
@@ -105,13 +104,10 @@ export default function PengaduanPage() {
       c.rtl,
       formatDateForExport(c.tanggalSelesai)
     ])
-    toast('Data diekspor (Excel)')
+  toast({ title: 'Export', description: 'Data diekspor (Excel)' })
   }
 
-  const toast = (msg: string) => {
-    setNotif(msg)
-    setTimeout(() => setNotif(''), 2800)
-  }
+  // toast helper now provided globally
 
   const save = async () => {
     if (!selected) return
@@ -126,14 +122,14 @@ export default function PengaduanPage() {
       const json = await res.json()
       setItems(prev => prev.map(p => p.id === selected.id ? { ...p, rtl: json.data.rtl, status: selected.status, tanggalSelesai: selected.tanggalSelesai } : p))
       setOpen(false)
-      toast('Perubahan disimpan')
+  toast({ title: 'Berhasil', description: 'Perubahan disimpan' })
     } catch (e) {
-      toast('Gagal menyimpan')
+  toast({ title: 'Gagal', description: 'Tidak dapat menyimpan perubahan', variant: 'destructive' })
     }
   }
 
   const sendProgress = () => {
-    toast('Notifikasi progress terkirim')
+  toast({ title: 'Notifikasi', description: 'Progress terkirim' })
   }
 
   const remove = async (id: string) => {
@@ -141,9 +137,9 @@ export default function PengaduanPage() {
       const res = await fetch(`/api/pengaduan/${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('fail')
       setItems(prev => prev.filter(p => p.id !== id))
-      toast('Pengaduan dihapus')
+  toast({ title: 'Dihapus', description: 'Pengaduan berhasil dihapus' })
     } catch {
-      toast('Gagal hapus')
+  toast({ title: 'Gagal', description: 'Tidak dapat menghapus', variant: 'destructive' })
     } finally {
       setConfirmDeleteId(null)
     }
@@ -161,12 +157,7 @@ export default function PengaduanPage() {
 
   return (
     <div className="space-y-6">
-      {notif && (
-        <Alert className="border-green-200 bg-green-50">
-          <CheckCircle className="w-4 h-4 text-green-600" />
-          <AlertDescription className="text-green-800">{notif}</AlertDescription>
-        </Alert>
-      )}
+  {/* Notifications dialihkan ke toast */}
       <Card className="bg-blue-900/40 border-blue-700/40 backdrop-blur supports-[backdrop-filter]:bg-blue-900/30">
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

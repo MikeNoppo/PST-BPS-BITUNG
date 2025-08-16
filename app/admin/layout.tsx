@@ -5,6 +5,7 @@ import { AdminSidebar } from '@/components/admin/sidebar'
 import { AdminTopbar } from '@/components/admin/topbar'
 import { useSession } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
+import { Toaster } from '@/components/ui/toaster'
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { status } = useSession()
@@ -37,6 +38,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           )}
         </main>
       </div>
+  <Toaster />
     </div>
   )
 }
