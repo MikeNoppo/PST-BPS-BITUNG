@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -9,56 +9,102 @@ import { Badge } from '@/components/ui/badge'
 import { Printer } from 'lucide-react'
 import { ExportDropdown, MONTHS, exportToCSV, exportToExcel } from '@/components/export-utils'
 
-// Mock data for reports
-const mockMonthlyData = [
-  {
-    no: 1,
-    tanggal: '2024-01-15',
-    nama: 'Ahmad Wijaya',
-    email: 'ahmad@email.com',
-    noWA: '08123456789',
-    isiPengaduan: 'Prosedur pelayanan terlalu rumit...',
-    klasifikasi: 'Prosedur Layanan',
-    rtl: 'Prosedur telah disederhanakan',
-    status: 'Selesai',
-    tanggalSelesai: '2024-01-20',
-  // notifikasiTerkirim removed
-  },
-  {
-    no: 2,
-    tanggal: '2024-01-14',
-    nama: 'Siti Nurhaliza',
-    email: 'siti@email.com',
-    noWA: '08234567890',
-    isiPengaduan: 'Waktu tunggu terlalu lama...',
-    klasifikasi: 'Waktu Pelayanan',
-    rtl: 'Evaluasi sistem antrian',
-    status: 'Proses',
-    tanggalSelesai: '-',
-  // notifikasiTerkirim removed
-  }
-]
-
-const mockAnnualData = [
-  { no: 1, bulan: 'Januari', klasifikasi: 'Prosedur Layanan', status: 'Selesai' },
-  { no: 2, bulan: 'Januari', klasifikasi: 'Waktu Pelayanan', status: 'Proses' },
-  { no: 3, bulan: 'Januari', klasifikasi: 'Perilaku Petugas', status: 'Baru' },
-  { no: 4, bulan: 'Februari', klasifikasi: 'Sarana Prasarana', status: 'Selesai' },
-  { no: 5, bulan: 'Februari', klasifikasi: 'Prosedur Layanan', status: 'Proses' }
-]
+type Complaint = {
+  id: string
+  tanggal: string
+  nama: string
+  email: string
+  noWA: string
+  klasifikasi: string
+  status: string
+  deskripsi: string
+  rtl: string
+  tanggalSelesai: string
+}
 
 export default function AdminLaporan() {
   const [selectedMonth, setSelectedMonth] = useState('01')
-  const [selectedYear, setSelectedYear] = useState('2024')
+  const [selectedYear, setSelectedYear] = useState('')
   const [reportType, setReportType] = useState('monthly')
+  const [allYearData, setAllYearData] = useState<Complaint[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [years, setYears] = useState<string[]>([])
+
+  // Fetch distinct years from dedicated endpoint
+  const fetchYears = useCallback(async () => {
+    try {
+      const res = await fetch('/api/pengaduan/years')
+      if (!res.ok) throw new Error('Gagal memuat tahun')
+      const json = await res.json()
+      const list: string[] = json.years || []
+      setYears(list)
+      if (list.length && !selectedYear) setSelectedYear(list[0])
+    } catch {}
+  }, [selectedYear])
+
+  const fetchYearData = useCallback(async (year: string) => {
+    setLoading(true); setError(null)
+    const limit = 50
+    let page = 1
+    let acc: Complaint[] = []
+    try {
+      while (true) {
+        const res = await fetch(`/api/pengaduan?admin=1&limit=${limit}&page=${page}`)
+        if (!res.ok) throw new Error('Fetch gagal')
+        const json = await res.json()
+        const data: Complaint[] = (json.data || []).filter((c: any) => new Date(c.tanggal).getFullYear().toString() === year)
+        acc = acc.concat(data)
+        if (!json.data || json.data.length < limit) break
+        page += 1
+        if (page > 20) break // safety cap
+      }
+      setAllYearData(acc)
+    } catch (e: any) {
+      setError(e.message || 'Gagal memuat data')
+    } finally { setLoading(false) }
+  }, [])
+
+  // Initial fetch of years
+  useEffect(() => { fetchYears() }, [fetchYears])
+
+  // Fetch whenever selected year changes (after initialization)
+  useEffect(() => { if (selectedYear) fetchYearData(selectedYear) }, [selectedYear, fetchYearData])
+
+  const monthName = (m: string) => MONTHS.find(mm => mm.value === m)?.label || m
+
+  const monthlyData = allYearData
+    .filter(c => new Date(c.tanggal).getMonth() + 1 === parseInt(selectedMonth, 10))
+    .sort((a,b)=> new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime())
+    .map((c,i) => ({
+      no: i+1,
+      tanggal: c.tanggal,
+      nama: c.nama,
+      email: c.email,
+      noWA: c.noWA,
+      isiPengaduan: c.deskripsi,
+      klasifikasi: c.klasifikasi,
+      rtl: c.rtl || '-',
+      status: c.status,
+      tanggalSelesai: c.tanggalSelesai || '-',
+    }))
+
+  const annualData = allYearData
+    .sort((a,b)=> new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime())
+    .map((c,i) => ({
+      no: i+1,
+      bulan: monthName(String(new Date(c.tanggal).getMonth()+1).padStart(2,'0')),
+      klasifikasi: c.klasifikasi,
+      status: c.status,
+    }))
 
   const exportMonthlyToCSV = () => {
   const headers = ['No','Tanggal Pengaduan','Nama Pelapor','Email','No WhatsApp','Isi Pengaduan','Klasifikasi','RTL','Status','Tanggal Selesai']
-    const monthName = MONTHS.find(m => m.value === selectedMonth)?.label
+    const monthLabel = monthName(selectedMonth)
     exportToCSV(
-      mockMonthlyData,
+      monthlyData,
       headers,
-      `laporan-bulanan-${monthName}-${selectedYear}.csv`,
+      `laporan-bulanan-${monthLabel}-${selectedYear}.csv`,
       (item) => [
         item.no,
         new Date(item.tanggal).toLocaleDateString('id-ID'),
@@ -76,7 +122,7 @@ export default function AdminLaporan() {
   const exportAnnualToCSV = () => {
     const headers = ['No','Bulan','Klasifikasi Pengaduan','Status Penanganan']
     exportToCSV(
-      mockAnnualData,
+      annualData,
       headers,
       `laporan-tahunan-${selectedYear}.csv`,
       (item) => [item.no, item.bulan, item.klasifikasi, item.status]
@@ -84,11 +130,11 @@ export default function AdminLaporan() {
   }
   const exportMonthlyToExcel = () => {
   const headers = ['No','Tanggal Pengaduan','Nama Pelapor','Email','No WhatsApp','Isi Pengaduan','Klasifikasi','RTL','Status','Tanggal Selesai']
-    const monthName = MONTHS.find(m => m.value === selectedMonth)?.label
+    const monthLabel = monthName(selectedMonth)
     exportToExcel(
-      mockMonthlyData,
+      monthlyData,
       headers,
-      `laporan-bulanan-${monthName}-${selectedYear}.xls`,
+      `laporan-bulanan-${monthLabel}-${selectedYear}.xls`,
       (item) => [
         item.no,
         new Date(item.tanggal).toLocaleDateString('id-ID'),
@@ -106,7 +152,7 @@ export default function AdminLaporan() {
   const exportAnnualToExcel = () => {
     const headers = ['No','Bulan','Klasifikasi Pengaduan','Status Penanganan']
     exportToExcel(
-      mockAnnualData,
+      annualData,
       headers,
       `laporan-tahunan-${selectedYear}.xls`,
       (item) => [item.no, item.bulan, item.klasifikasi, item.status]
@@ -170,13 +216,13 @@ export default function AdminLaporan() {
             <div>
               <label className="block text-sm font-medium mb-1 text-blue-200">Tahun</label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-24 bg-blue-950/40 border-blue-700/40 text-blue-50">
-                  <SelectValue />
+                <SelectTrigger className="w-28 bg-blue-950/40 border-blue-700/40 text-blue-50">
+                  <SelectValue placeholder={years.length ? 'Pilih' : '...'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2024">2024</SelectItem>
-                  <SelectItem value="2023">2023</SelectItem>
-                  <SelectItem value="2022">2022</SelectItem>
+                  {years.map(y => (
+                    <SelectItem key={y} value={y}>{y}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -200,7 +246,7 @@ export default function AdminLaporan() {
                 </h1>
                 <h2 className="text-lg font-semibold">
                   {reportType === 'monthly' 
-                    ? `Laporan Bulanan - ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`
+                    ? `Laporan Bulanan - ${monthName(selectedMonth)} ${selectedYear}`
                     : `Laporan Tahunan - ${selectedYear}`
                   }
                 </h2>
@@ -225,7 +271,13 @@ export default function AdminLaporan() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {mockMonthlyData.map((item) => (
+                      {loading && (
+                        <TableRow><TableCell colSpan={8} className="text-center text-blue-200">Memuat...</TableCell></TableRow>
+                      )}
+                      {!loading && monthlyData.length === 0 && (
+                        <TableRow><TableCell colSpan={8} className="text-center text-blue-200">Tidak ada data</TableCell></TableRow>
+                      )}
+                      {monthlyData.map((item) => (
                         <TableRow key={item.no} className={item.no % 2 ? 'bg-blue-900/30' : 'bg-blue-900/10'}>
                           <TableCell className="text-blue-50">{item.no}</TableCell>
                           <TableCell className="text-blue-50">{new Date(item.tanggal).toLocaleDateString('id-ID')}</TableCell>
@@ -269,7 +321,13 @@ export default function AdminLaporan() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {mockAnnualData.map((item) => (
+                      {loading && (
+                        <TableRow><TableCell colSpan={4} className="text-center text-blue-200">Memuat...</TableCell></TableRow>
+                      )}
+                      {!loading && annualData.length === 0 && (
+                        <TableRow><TableCell colSpan={4} className="text-center text-blue-200">Tidak ada data</TableCell></TableRow>
+                      )}
+                      {annualData.map((item) => (
                         <TableRow key={item.no} className={item.no % 2 ? 'bg-blue-900/30' : 'bg-blue-900/10'}>
                           <TableCell className="text-blue-50">{item.no}</TableCell>
                           <TableCell className="text-blue-50">{item.bulan}</TableCell>
