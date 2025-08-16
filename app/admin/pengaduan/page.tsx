@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,15 +14,45 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Edit, Send, Download, Search, CheckCircle } from 'lucide-react'
 import { exportToCSV, exportToExcel, formatDateForExport, ExportDropdown } from '@/components/export-utils'
 
-const MOCK = [
-  { id: 'PGD001', tanggal: '2024-01-15', nama: 'Ahmad Wijaya', email: 'ahmad@email.com', noWA: '08123456789', klasifikasi: 'Prosedur Layanan', status: 'Selesai', deskripsi: 'Prosedur pelayanan terlalu rumit dan memakan waktu lama', rtl: 'Prosedur telah disederhanakan dan waktu pelayanan dipercepat', tanggalSelesai: '2024-01-20' },
-  { id: 'PGD002', tanggal: '2024-01-14', nama: 'Siti Nurhaliza', email: 'siti@email.com', noWA: '08234567890', klasifikasi: 'Waktu Pelayanan', status: 'Proses', deskripsi: 'Waktu tunggu terlalu lama untuk mendapatkan layanan', rtl: 'Sedang dilakukan evaluasi sistem antrian', tanggalSelesai: '' },
-  { id: 'PGD003', tanggal: '2024-01-13', nama: 'Budi Santoso', email: 'budi@email.com', noWA: '08345678901', klasifikasi: 'Perilaku Petugas Pelayanan', status: 'Baru', deskripsi: 'Petugas kurang ramah dalam memberikan pelayanan', rtl: '', tanggalSelesai: '' }
-]
+type ComplaintRow = {
+  id: string
+  tanggal: string
+  nama: string
+  email: string
+  noWA: string
+  klasifikasi: string
+  status: string
+  deskripsi: string
+  rtl: string
+  tanggalSelesai: string
+}
 
 export default function PengaduanPage() {
   useSession()
-  const [items, setItems] = useState(MOCK)
+  const [items, setItems] = useState<ComplaintRow[]>([])
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const limit = 8
+  const [loading, setLoading] = useState(false)
+  // Fetch complaints from API
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const res = await fetch(`/api/pengaduan?admin=1&limit=${limit}&page=${page}`)
+        const json = await res.json()
+        if (!cancelled && json?.data) {
+          setItems(json.data)
+          setTotal(json.total || json.data.length)
+        }
+      } catch (e) {
+        console.error('Load complaints failed', e)
+      } finally { if (!cancelled) setLoading(false) }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [page])
   const [selected, setSelected] = useState<any>(null)
   const [open, setOpen] = useState(false)
   const [notif, setNotif] = useState('')
@@ -81,11 +111,23 @@ export default function PengaduanPage() {
     setTimeout(() => setNotif(''), 2800)
   }
 
-  const save = () => {
+  const save = async () => {
     if (!selected) return
-    setItems(prev => prev.map(p => (p.id === selected.id ? selected : p)))
-    setOpen(false)
-    toast('Perubahan disimpan')
+    try {
+      const payload = {
+        rtl: selected.rtl,
+        status: selected.status === 'Baru' ? 'BARU' : selected.status === 'Proses' ? 'PROSES' : selected.status === 'Selesai' ? 'SELESAI' : undefined,
+        tanggalSelesai: selected.tanggalSelesai || undefined
+      }
+      const res = await fetch(`/api/pengaduan/${selected.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      if (!res.ok) throw new Error('Gagal menyimpan')
+      const json = await res.json()
+      setItems(prev => prev.map(p => p.id === selected.id ? { ...p, rtl: json.data.rtl, status: selected.status, tanggalSelesai: selected.tanggalSelesai } : p))
+      setOpen(false)
+      toast('Perubahan disimpan')
+    } catch (e) {
+      toast('Gagal menyimpan')
+    }
   }
 
   const sendProgress = () => {
@@ -157,9 +199,19 @@ export default function PengaduanPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {loading && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-blue-200">Memuat...</TableCell>
+                  </TableRow>
+                )}
+                {!loading && filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-blue-200">Tidak ada data</TableCell>
+                  </TableRow>
+                )}
                 {filtered.map((c, i) => (
                   <TableRow key={c.id} className={i % 2 ? 'bg-blue-900/30' : 'bg-blue-900/10'}>
-                    <TableCell className="text-blue-50">{i + 1}</TableCell>
+                    <TableCell className="text-blue-50">{(page - 1) * limit + i + 1}</TableCell>
                     <TableCell className="text-blue-50">{formatDateForExport(c.tanggal)}</TableCell>
                     <TableCell className="font-medium text-blue-50">{c.nama}</TableCell>
                     <TableCell className="text-blue-100/90">{c.email}</TableCell>
@@ -178,6 +230,11 @@ export default function PengaduanPage() {
           </div>
         </CardContent>
       </Card>
+      <div className="flex items-center gap-4">
+        <Button size="sm" variant="outline" disabled={page===1} onClick={()=>setPage(p=>p-1)}>Prev</Button>
+        <span className="text-xs text-blue-200">Hal {page} / {Math.max(1, Math.ceil(total/limit))}</span>
+        <Button size="sm" variant="outline" disabled={page*limit>=total} onClick={()=>setPage(p=>p+1)}>Next</Button>
+      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         {/* Adjusted dialog styling for better contrast (previously white background with very light text) */}

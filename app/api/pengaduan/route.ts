@@ -78,25 +78,62 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
     const limitParam = searchParams.get('limit')
+    const pageParam = searchParams.get('page')
+    const adminFlag = searchParams.get('admin') // presence => admin view
     const limit = Math.min(Math.max(parseInt(limitParam || '5', 10) || 5, 1), 50)
-    const complaints = await prisma.complaint.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      select: {
-        code: true,
-        createdAt: true,
-        classification: true,
-        status: true,
-      }
-    })
-    // Map to public shape expected by table (id, tanggal, klasifikasi, status)
-    const data = complaints.map(c => ({
+    const page = Math.max(parseInt(pageParam || '1', 10) || 1, 1)
+    const skip = (page - 1) * limit
+
+    const [total, complaints] = await Promise.all([
+      prisma.complaint.count(),
+      prisma.complaint.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        select: adminFlag ? {
+          code: true,
+          createdAt: true,
+          classification: true,
+          status: true,
+          reporterName: true,
+          email: true,
+            phone: true,
+          description: true,
+          rtl: true,
+          completedAt: true,
+        } : {
+          code: true,
+          createdAt: true,
+          classification: true,
+          status: true,
+        }
+      })
+    ])
+
+    if (adminFlag) {
+      const data = complaints.map((c: any) => ({
+        id: c.code,
+        tanggal: c.createdAt.toISOString(),
+        nama: c.reporterName,
+        email: c.email,
+        noWA: c.phone,
+        klasifikasi: humanizeClassification(c.classification),
+        status: humanizeStatus(c.status),
+        deskripsi: c.description,
+        rtl: c.rtl || '',
+        tanggalSelesai: c.completedAt ? c.completedAt.toISOString().slice(0,10) : ''
+      }))
+      return NextResponse.json({ data, page, limit, total })
+    }
+
+    // public shape
+    const data = (complaints as any).map((c: any) => ({
       id: c.code,
       tanggal: c.createdAt.toISOString(),
       klasifikasi: humanizeClassification(c.classification),
       status: humanizeStatus(c.status)
     }))
-    return NextResponse.json({ data })
+    return NextResponse.json({ data, page, limit, total })
   } catch (e) {
     console.error('GET /api/pengaduan error', e)
     return NextResponse.json({ error: 'SERVER_ERROR' }, { status: 500 })
