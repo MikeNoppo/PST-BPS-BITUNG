@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Edit, Send, Download, Search, CheckCircle } from 'lucide-react'
+import { Edit, Send, Search, CheckCircle, Trash2 } from 'lucide-react'
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog'
 import { exportToCSV, exportToExcel, formatDateForExport, ExportDropdown } from '@/components/export-utils'
 
 type ComplaintRow = {
@@ -56,6 +57,7 @@ export default function PengaduanPage() {
   const [selected, setSelected] = useState<any>(null)
   const [open, setOpen] = useState(false)
   const [notif, setNotif] = useState('')
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [q, setQ] = useState('')
   // Use undefined sentinel via empty string mapping for 'all'
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -134,6 +136,19 @@ export default function PengaduanPage() {
     toast('Notifikasi progress terkirim')
   }
 
+  const remove = async (id: string) => {
+    try {
+      const res = await fetch(`/api/pengaduan/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('fail')
+      setItems(prev => prev.filter(p => p.id !== id))
+      toast('Pengaduan dihapus')
+    } catch {
+      toast('Gagal hapus')
+    } finally {
+      setConfirmDeleteId(null)
+    }
+  }
+
   const badge = (s: string) => {
     const base = 'px-2 py-0.5 rounded text-xs font-medium border'
     switch (s) {
@@ -195,7 +210,7 @@ export default function PengaduanPage() {
                   <TableHead className="text-blue-100">No WA</TableHead>
                   <TableHead className="text-blue-100">Klasifikasi</TableHead>
                   <TableHead className="text-blue-100">Status</TableHead>
-                  <TableHead className="text-blue-100">Aksi</TableHead>
+                  <TableHead className="text-blue-100 text-center">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -218,10 +233,27 @@ export default function PengaduanPage() {
                     <TableCell className="text-blue-100/90">{c.noWA}</TableCell>
                     <TableCell className="text-blue-100/90">{c.klasifikasi}</TableCell>
                     <TableCell>{badge(c.status)}</TableCell>
-                    <TableCell>
-                      <Button size="sm" variant="soft" className="gap-1" onClick={() => { setSelected({ ...c }); setOpen(true) }}>
-                        <Edit className="w-3 h-3" />Detail
+                    <TableCell className="flex gap-2 justify-center">
+                      <Button size="icon" variant="soft" className="w-8 h-8" onClick={() => { setSelected({ ...c }); setOpen(true) }}>
+                        <Edit className="w-4 h-4" />
                       </Button>
+                      <AlertDialog open={confirmDeleteId===c.id} onOpenChange={(o)=> setConfirmDeleteId(o? c.id : null)}>
+                        <AlertDialogTrigger asChild>
+                          <Button size="icon" variant="outline" className="w-8 h-8 text-red-400 hover:text-red-300 hover:border-red-400/60">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-blue-950/95 border-blue-700/60 text-blue-50">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-blue-100">Hapus Pengaduan?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-blue-300/80">Data ini akan dihapus permanen. Lanjutkan?</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="bg-white text-blue-900 hover:bg-blue-50">Batal</AlertDialogCancel>
+                            <AlertDialogAction className="bg-red-600 hover:bg-red-500" onClick={()=>remove(c.id)}>Hapus</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </TableCell>
                   </TableRow>
                 ))}

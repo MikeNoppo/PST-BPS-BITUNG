@@ -119,3 +119,22 @@ export async function PATCH(
     return NextResponse.json({ error: 'SERVER_ERROR' }, { status: 500 })
   }
 }
+
+// DELETE /api/pengaduan/[code]
+export async function DELETE(
+  _req: Request,
+  { params }: { params: { code: string } }
+) {
+  const rawCode = params.code
+  if (!rawCode) return NextResponse.json({ error: 'MISSING_CODE' }, { status: 400 })
+  try {
+    const code = decodeURIComponent(rawCode).trim().toUpperCase()
+    const existing = await prisma.complaint.findFirst({ where: { code }, select: { id: true } })
+    if (!existing) return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 })
+    await prisma.complaint.delete({ where: { id: existing.id } })
+    return NextResponse.json({ success: true })
+  } catch (e) {
+    console.error('DELETE /api/pengaduan/[code] error', e)
+    return NextResponse.json({ error: 'SERVER_ERROR' }, { status: 500 })
+  }
+}
