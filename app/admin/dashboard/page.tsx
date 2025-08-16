@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { HighlightedBarChart } from '@/components/ui/highlighted-bar-chart'
-import { BarChart as ReBarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { PieChart, Pie, LabelList, Cell } from 'recharts'
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
 
 // Data mock ringkasan (gantikan dengan fetch server nanti)
@@ -24,6 +25,27 @@ export default function AdminDashboard() {
     DATA.forEach(d => { m[d.klasifikasi] = (m[d.klasifikasi] || 0) + 1 })
     return Object.entries(m).map(([klasifikasi, jumlah]) => ({ klasifikasi, jumlah }))
   }, [])
+
+  // Palet warna disesuaikan agar kontras & harmonis dengan background biru gelap.
+  const palette = [
+    '#38bdf8', // sky-400
+    '#34d399', // emerald-400
+    '#a78bfa', // violet-400
+    '#fbbf24', // amber-400
+    '#fb7185', // rose-400
+    '#60a5fa', // blue-400
+    '#f472b6', // pink-400
+    '#4ade80', // green-400
+  ]
+
+  const pieData = useMemo(() => klasifikasiChart.map((k,i) => ({ name: k.klasifikasi, value: k.jumlah, fill: palette[i % palette.length] })), [klasifikasiChart])
+
+  // Konfigurasi label tooltip/legend (warna diinject agar bisa dipakai indikator)
+  const pieConfig: ChartConfig = useMemo(() => {
+    const base: ChartConfig = { value: { label: 'Jumlah' } }
+    klasifikasiChart.forEach((k,i) => { base[k.klasifikasi] = { label: k.klasifikasi.replace(/_/g,' '), color: palette[i % palette.length] } })
+    return base
+  }, [klasifikasiChart])
 
   // Monthly complaints (dummy aggregation based on DATA dates; in real app fetch aggregated counts)
   const monthlyChart = useMemo(() => {
@@ -68,18 +90,42 @@ export default function AdminDashboard() {
         </Card>
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
-        <HighlightedBarChart
-          title="Distribusi Klasifikasi Pengaduan"
-          data={klasifikasiChart}
-          xKey="klasifikasi"
-          yKey="jumlah"
-          description="Ringkasan jumlah pengaduan per klasifikasi"
-          valueLabel="Klasifikasi"
-          color="var(--chart-1)"
-          shortLabel={(v: string) => v.length > 10 ? v.slice(0,10)+'…' : v}
-          formatValue={(v) => v.toString()}
-          className="bg-blue-900/40 border-blue-700/40"
-        />
+        {/* Pie Chart Distribusi Klasifikasi Pengaduan */}
+        <Card className="bg-blue-900/40 border-blue-700/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-blue-100 text-base">Distribusi Klasifikasi Pengaduan</CardTitle>
+            <CardDescription className="text-blue-300/70">Proporsi jumlah pengaduan per klasifikasi</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={pieConfig} className="mx-auto aspect-square max-h-[300px] [&_.recharts-text]:fill-background">
+              <PieChart>
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent
+                    hideLabel
+                    nameKey="value"
+                    formatter={(val, _name, item) => {
+                      const total = pieData.reduce((s,d)=>s+d.value,0)
+                      const pct = total ? ((item?.value as number)/total*100).toFixed(1) : '0'
+                      const key = (item?.name as string)||''
+                      const label = key.replace(/_/g,' ')
+                      return (
+                        <div className="flex w-full justify-between gap-4">
+                          <span className="text-foreground font-medium">{label}</span>
+                          <span className="font-mono text-foreground">{item?.value} <span className="text-muted-foreground">({pct}%)</span></span>
+                        </div>
+                      )
+                    }}
+                  />}
+                />
+                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={110} paddingAngle={3} cornerRadius={6} stroke="#0f1e3a" strokeWidth={2}>
+                  {pieData.map((entry,i) => <Cell key={entry.name} fill={entry.fill} />) }
+                  <LabelList dataKey="value" stroke="none" fontSize={11} fill="currentColor" formatter={(v:number)=>v.toString()} />
+                </Pie>
+              </PieChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
         <HighlightedBarChart
           title="Jumlah Pengaduan Masuk (Tahun Berjalan)"
           data={monthlyChart}
