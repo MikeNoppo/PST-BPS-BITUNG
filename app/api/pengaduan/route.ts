@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { sendWhatsAppMessage, isFonnteSuccess } from '@/lib/fonnte'
 
 // ------------------ Rate Limiting & Anti-Spam ------------------
 // In-memory store (will reset on redeploy / server restart). Cukup sebagai lapisan proteksi dasar.
@@ -176,6 +177,39 @@ export async function POST(req: Request) {
     })
   // Invalidate public complaints list cache (ISR tag)
   try { revalidateTag('complaints-public') } catch {}
+    // Send WhatsApp notification (best effort, non-blocking)
+    ;(async () => {
+      try {
+        if (process.env.FONNTE_TOKEN) {
+          const baseUrl = process.env.APP_BASE_URL || ''
+          const humanClassification = humanizeClassification(data.klasifikasi as any)
+          const descSnippet = data.deskripsi.length > 160 ? data.deskripsi.slice(0,157) + '...' : data.deskripsi
+          const trackLink = baseUrl ? `${baseUrl}/status?ref=${complaint.code}` : 'Lacak status di website.'
+          const message = [
+            `Terima kasih ${data.namaLengkap}. Pengaduan Anda telah diterima.`,
+            `Kode: ${complaint.code}`,
+            `Klasifikasi: ${humanClassification}`,
+            `Deskripsi: ${descSnippet}`,
+            trackLink
+          ].join('\n')
+          const resp = await sendWhatsAppMessage(data.nomorTelepon, message)
+          try {
+            await prisma.notification.create({
+              data: {
+                complaintId: complaint.id,
+                channel: 'WHATSAPP',
+                status: isFonnteSuccess(resp) ? 'SUCCESS' : 'FAILED',
+                detail: JSON.stringify(isFonnteSuccess(resp) ? { detail: resp.detail, id: resp.id } : resp).slice(0, 950)
+              }
+            })
+          } catch (e) {
+            console.error('Gagal simpan Notification', e)
+          }
+        }
+      } catch (e) {
+        console.error('Gagal kirim WhatsApp notifikasi', e)
+      }
+    })()
     return NextResponse.json({ data: complaint })
   } catch (e: any) {
     console.error('POST /api/pengaduan error', e)
