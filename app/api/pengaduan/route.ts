@@ -183,15 +183,25 @@ export async function POST(req: Request) {
         if (process.env.FONNTE_TOKEN) {
           const baseUrl = process.env.APP_BASE_URL || ''
           const humanClassification = humanizeClassification(data.klasifikasi as any)
-          const descSnippet = data.deskripsi.length > 160 ? data.deskripsi.slice(0,157) + '...' : data.deskripsi
-          const trackLink = baseUrl ? `${baseUrl}/status?ref=${complaint.code}` : 'Lacak status di website.'
-          const message = [
-            `Terima kasih ${data.namaLengkap}. Pengaduan Anda telah diterima.`,
-            `Kode: ${complaint.code}`,
-            `Klasifikasi: ${humanClassification}`,
-            `Deskripsi: ${descSnippet}`,
-            trackLink
-          ].join('\n')
+          const descClean = data.deskripsi.replace(/\s+/g,' ').trim()
+          const descSnippet = descClean.length > 200 ? descClean.slice(0,197) + '...' : descClean
+          const trackLink = baseUrl ? `${baseUrl}/status?ref=${complaint.code}` : ''
+          const footer = process.env.WA_MESSAGE_FOOTER || 'Jangan balas pesan ini. Simpan kode untuk pelacakan.'
+          const lines: string[] = []
+          lines.push(`*Terima kasih, ${data.namaLengkap}*`) // greeting
+          lines.push('Pengaduan Anda telah *diterima* ✅')
+          lines.push('')
+          lines.push(`*Kode:* ${complaint.code}`)
+          lines.push(`*Klasifikasi:* ${humanClassification}`)
+          lines.push(`*Deskripsi:* ${descSnippet}`)
+          if (trackLink) {
+            lines.push('')
+            lines.push('Lacak Status: ')
+            lines.push(trackLink)
+          }
+          lines.push('')
+            lines.push(footer)
+          const message = lines.join('\n')
           const resp = await sendWhatsAppMessage(data.nomorTelepon, message)
           try {
             await prisma.notification.create({
