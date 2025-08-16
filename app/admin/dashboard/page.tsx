@@ -1,28 +1,61 @@
 "use client"
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { HighlightedBarChart } from '@/components/ui/highlighted-bar-chart'
 import { PieChart, Pie, LabelList, Cell } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
 
-// Data mock ringkasan (gantikan dengan fetch server nanti)
-const DATA = [
-  { id: 'PGD001', tanggal: '2024-01-15', status: 'Selesai', klasifikasi: 'Prosedur Layanan' },
-  { id: 'PGD002', tanggal: '2024-01-14', status: 'Proses', klasifikasi: 'Waktu Pelayanan' },
-  { id: 'PGD003', tanggal: '2024-01-13', status: 'Baru', klasifikasi: 'Perilaku Petugas Pelayanan' }
+// TODO: gantikan DATA_CHART dengan data real agregasi (endpoint baru bisa dibuat nanti)
+const DATA_CHART = [
+  { id: 'PGD001', tanggal: '2025-01-15', status: 'Selesai', klasifikasi: 'Prosedur Layanan' },
+  { id: 'PGD002', tanggal: '2025-02-01', status: 'Proses', klasifikasi: 'Waktu Pelayanan' },
+  { id: 'PGD003', tanggal: '2025-02-10', status: 'Baru', klasifikasi: 'Perilaku Petugas Pelayanan' }
 ]
 
+interface StatsYear {
+  year: number
+  total: number
+  baru: number
+  proses: number
+  selesai: number
+  generatedAt: string
+}
+
 export default function AdminDashboard() {
-  const total = DATA.length
-  const baru = DATA.filter(d => d.status === 'Baru').length
-  const proses = DATA.filter(d => d.status === 'Proses').length
-  const selesai = DATA.filter(d => d.status === 'Selesai').length
+  const [stats, setStats] = useState<StatsYear | null>(null)
+  const [loadingStats, setLoadingStats] = useState(true)
+  const [errorStats, setErrorStats] = useState<string | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    async function load() {
+      try {
+        setLoadingStats(true)
+        const year = new Date().getFullYear()
+        const res = await fetch(`/api/pengaduan/stats?year=${year}`, { signal: controller.signal })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const json = await res.json()
+        setStats(json)
+      } catch (e: any) {
+        if (e.name !== 'AbortError') setErrorStats(e.message || 'Gagal memuat statistik')
+      } finally {
+        setLoadingStats(false)
+      }
+    }
+    load()
+    return () => controller.abort()
+  }, [])
+
+  const total = stats?.total ?? 0
+  const baru = stats?.baru ?? 0
+  const proses = stats?.proses ?? 0
+  const selesai = stats?.selesai ?? 0
 
   const klasifikasiChart = useMemo(() => {
     const m: Record<string, number> = {}
-    DATA.forEach(d => { m[d.klasifikasi] = (m[d.klasifikasi] || 0) + 1 })
+    DATA_CHART.forEach(d => { m[d.klasifikasi] = (m[d.klasifikasi] || 0) + 1 })
     return Object.entries(m).map(([klasifikasi, jumlah]) => ({ klasifikasi, jumlah }))
   }, [])
 
@@ -49,13 +82,15 @@ export default function AdminDashboard() {
 
   // Monthly complaints (dummy aggregation based on DATA dates; in real app fetch aggregated counts)
   const monthlyChart = useMemo(() => {
+    const year = new Date().getFullYear()
     const months = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, count: 0 }))
-    DATA.forEach(d => {
-      const m = new Date(d.tanggal).getMonth()
-      months[m].count += 1
+    DATA_CHART.forEach(d => {
+      const dt = new Date(d.tanggal)
+      if (dt.getFullYear() === year) {
+        months[dt.getMonth()].count += 1
+      }
     })
-    // Ensure label formatting
-    return months.map(m => ({ month: m.month, label: new Date(2024, m.month - 1, 1).toLocaleString('id-ID', { month: 'short' }), count: m.count }))
+    return months.map(m => ({ month: m.month, label: new Date(year, m.month - 1, 1).toLocaleString('id-ID', { month: 'short' }), count: m.count }))
   }, [])
 
   const [activeKlas, setActiveKlas] = useState<number | null>(null)
@@ -71,24 +106,27 @@ export default function AdminDashboard() {
         <Card className="relative bg-gradient-to-br from-blue-900/50 via-blue-900/40 to-blue-800/40 border border-blue-700/40 shadow-sm overflow-hidden">
           <div className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-white/5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-b before:from-white/5 before:to-transparent" />
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-blue-200/70">Total</CardTitle></CardHeader>
-          <CardContent className="text-3xl font-semibold text-blue-200">{total}</CardContent>
+          <CardContent className="text-3xl font-semibold text-blue-200">{loadingStats ? '…' : total}</CardContent>
         </Card>
         <Card className="relative bg-gradient-to-br from-blue-900/50 via-blue-900/40 to-blue-800/40 border border-blue-700/40 shadow-sm overflow-hidden">
           <div className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-white/5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-b before:from-white/5 before:to-transparent" />
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-blue-300">Baru</CardTitle></CardHeader>
-          <CardContent className="text-3xl font-semibold text-blue-100">{baru}</CardContent>
+          <CardContent className="text-3xl font-semibold text-blue-100">{loadingStats ? '…' : baru}</CardContent>
         </Card>
         <Card className="relative bg-gradient-to-br from-blue-900/50 via-blue-900/40 to-blue-800/40 border border-blue-700/40 shadow-sm overflow-hidden">
           <div className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-white/5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-b before:from-white/5 before:to-transparent" />
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-amber-300">Proses</CardTitle></CardHeader>
-          <CardContent className="text-3xl font-semibold text-amber-200">{proses}</CardContent>
+          <CardContent className="text-3xl font-semibold text-amber-200">{loadingStats ? '…' : proses}</CardContent>
         </Card>
         <Card className="relative bg-gradient-to-br from-blue-900/50 via-blue-900/40 to-blue-800/40 border border-blue-700/40 shadow-sm overflow-hidden">
           <div className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-white/5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-b before:from-white/5 before:to-transparent" />
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-emerald-300">Selesai</CardTitle></CardHeader>
-          <CardContent className="text-3xl font-semibold text-emerald-200">{selesai}</CardContent>
+          <CardContent className="text-3xl font-semibold text-emerald-200">{loadingStats ? '…' : selesai}</CardContent>
         </Card>
       </div>
+      {errorStats && (
+        <p className="text-xs text-red-300">Gagal memuat statistik: {errorStats}</p>
+      )}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Pie Chart Distribusi Klasifikasi Pengaduan */}
         <Card className="bg-blue-900/40 border-blue-700/40">
