@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Edit, Send, Search, Trash2 } from 'lucide-react'
+import { Edit, Search, Trash2 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog'
 import { exportToCSV, exportToExcel, formatDateForExport, ExportDropdown } from '@/components/export-utils'
@@ -55,6 +55,7 @@ export default function PengaduanPage() {
     return () => { cancelled = true }
   }, [page])
   const [selected, setSelected] = useState<any>(null)
+  const [original, setOriginal] = useState<any>(null)
   const [open, setOpen] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [q, setQ] = useState('')
@@ -109,8 +110,16 @@ export default function PengaduanPage() {
 
   // toast helper now provided globally
 
+  const [saving, setSaving] = useState(false)
+  const hasChanges = selected && original && (
+    selected.rtl !== original.rtl ||
+    selected.status !== original.status ||
+    (selected.tanggalSelesai || '') !== (original.tanggalSelesai || '')
+  )
+
   const save = async () => {
-    if (!selected) return
+    if (!selected || !hasChanges) return
+    setSaving(true)
     try {
       const payload = {
         rtl: selected.rtl,
@@ -121,16 +130,32 @@ export default function PengaduanPage() {
       if (!res.ok) throw new Error('Gagal menyimpan')
       const json = await res.json()
       setItems(prev => prev.map(p => p.id === selected.id ? { ...p, rtl: json.data.rtl, status: selected.status, tanggalSelesai: selected.tanggalSelesai } : p))
+
+      // Kirim notifikasi status otomatis setelah perubahan berhasil
+      try {
+        const notifyPayload = {
+          statusOverride: payload.status,
+          rtlOverride: payload.rtl,
+          tanggalSelesaiOverride: payload.tanggalSelesai
+        }
+        const nres = await fetch(`/api/pengaduan/${selected.id}/notify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(notifyPayload) })
+        if (!nres.ok) {
+          toast({ title: 'Tersimpan (WA gagal)', description: 'Perubahan disimpan tapi notifikasi tidak terkirim', variant: 'destructive' })
+        } else {
+          toast({ title: 'Berhasil', description: 'Perubahan & notifikasi terkirim' })
+        }
+      } catch {
+        toast({ title: 'Tersimpan (WA gagal)', description: 'Perubahan disimpan tapi notifikasi gagal', variant: 'destructive' })
+      }
       setOpen(false)
-  toast({ title: 'Berhasil', description: 'Perubahan disimpan' })
     } catch (e) {
-  toast({ title: 'Gagal', description: 'Tidak dapat menyimpan perubahan', variant: 'destructive' })
+      toast({ title: 'Gagal', description: 'Tidak dapat menyimpan perubahan', variant: 'destructive' })
+    } finally {
+      setSaving(false)
     }
   }
 
-  const sendProgress = () => {
-  toast({ title: 'Notifikasi', description: 'Progress terkirim' })
-  }
+  // Notifikasi manual dihapus; notifikasi dikirim otomatis setelah simpan jika ada perubahan.
 
   const remove = async (id: string) => {
     try {
@@ -225,7 +250,7 @@ export default function PengaduanPage() {
                     <TableCell className="text-blue-100/90">{c.klasifikasi}</TableCell>
                     <TableCell>{badge(c.status)}</TableCell>
                     <TableCell className="flex gap-2 justify-center">
-                      <Button size="icon" variant="soft" className="w-8 h-8" onClick={() => { setSelected({ ...c }); setOpen(true) }}>
+                      <Button size="icon" variant="soft" className="w-8 h-8" onClick={() => { setSelected({ ...c }); setOriginal({ ...c }); setOpen(true) }}>
                         <Edit className="w-4 h-4" />
                       </Button>
                       <AlertDialog open={confirmDeleteId===c.id} onOpenChange={(o)=> setConfirmDeleteId(o? c.id : null)}>
@@ -309,8 +334,7 @@ export default function PengaduanPage() {
                   </div>
                 </div>
                 <div className="flex gap-3 pt-2">
-                  <Button onClick={save} className="bg-blue-600 hover:bg-blue-500">Simpan</Button>
-                  <Button variant="soft" onClick={sendProgress} className="gap-2"><Send className="w-4 h-4" />Notifikasi</Button>
+                  <Button onClick={save} className="bg-blue-600 hover:bg-blue-500" disabled={!hasChanges || saving}>{saving ? 'Menyimpan...' : 'Simpan'}</Button>
                 </div>
               </section>
             </div>
