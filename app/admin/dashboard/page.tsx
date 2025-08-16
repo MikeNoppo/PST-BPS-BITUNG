@@ -7,12 +7,12 @@ import { PieChart, Pie, LabelList, Cell } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
 
-// TODO: gantikan DATA_CHART dengan data real agregasi (endpoint baru bisa dibuat nanti)
-const DATA_CHART = [
-  { id: 'PGD001', tanggal: '2025-01-15', status: 'Selesai', klasifikasi: 'Prosedur Layanan' },
-  { id: 'PGD002', tanggal: '2025-02-01', status: 'Proses', klasifikasi: 'Waktu Pelayanan' },
-  { id: 'PGD003', tanggal: '2025-02-10', status: 'Baru', klasifikasi: 'Perilaku Petugas Pelayanan' }
-]
+interface AggregateData {
+  year: number
+  monthly: { month: number; count: number }[]
+  classification: { key: string; label: string; count: number }[]
+  generatedAt: string
+}
 
 interface StatsYear {
   year: number
@@ -27,6 +27,9 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<StatsYear | null>(null)
   const [loadingStats, setLoadingStats] = useState(true)
   const [errorStats, setErrorStats] = useState<string | null>(null)
+  const [aggregate, setAggregate] = useState<AggregateData | null>(null)
+  const [loadingAgg, setLoadingAgg] = useState(true)
+  const [errorAgg, setErrorAgg] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -48,16 +51,35 @@ export default function AdminDashboard() {
     return () => controller.abort()
   }, [])
 
+  useEffect(() => {
+    const controller = new AbortController()
+    async function loadAgg() {
+      try {
+        setLoadingAgg(true)
+        const year = new Date().getFullYear()
+        const res = await fetch(`/api/pengaduan/aggregate?year=${year}`, { signal: controller.signal })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const json = await res.json()
+        setAggregate(json)
+      } catch (e: any) {
+        if (e.name !== 'AbortError') setErrorAgg(e.message || 'Gagal memuat agregasi')
+      } finally {
+        setLoadingAgg(false)
+      }
+    }
+    loadAgg()
+    return () => controller.abort()
+  }, [])
+
   const total = stats?.total ?? 0
   const baru = stats?.baru ?? 0
   const proses = stats?.proses ?? 0
   const selesai = stats?.selesai ?? 0
 
   const klasifikasiChart = useMemo(() => {
-    const m: Record<string, number> = {}
-    DATA_CHART.forEach(d => { m[d.klasifikasi] = (m[d.klasifikasi] || 0) + 1 })
-    return Object.entries(m).map(([klasifikasi, jumlah]) => ({ klasifikasi, jumlah }))
-  }, [])
+    if (!aggregate) return [] as { klasifikasi: string; jumlah: number }[]
+    return aggregate.classification.map(c => ({ klasifikasi: c.label, jumlah: c.count }))
+  }, [aggregate])
 
   // Palet warna disesuaikan agar kontras & harmonis dengan background biru gelap.
   const palette = [
@@ -82,16 +104,13 @@ export default function AdminDashboard() {
 
   // Monthly complaints (dummy aggregation based on DATA dates; in real app fetch aggregated counts)
   const monthlyChart = useMemo(() => {
-    const year = new Date().getFullYear()
-    const months = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, count: 0 }))
-    DATA_CHART.forEach(d => {
-      const dt = new Date(d.tanggal)
-      if (dt.getFullYear() === year) {
-        months[dt.getMonth()].count += 1
-      }
-    })
-    return months.map(m => ({ month: m.month, label: new Date(year, m.month - 1, 1).toLocaleString('id-ID', { month: 'short' }), count: m.count }))
-  }, [])
+    if (!aggregate) return [] as { month: number; label: string; count: number }[]
+    return aggregate.monthly.map(m => ({
+      month: m.month,
+      label: new Date(2000, m.month - 1, 1).toLocaleString('id-ID', { month: 'short' }),
+      count: m.count
+    }))
+  }, [aggregate])
 
   const [activeKlas, setActiveKlas] = useState<number | null>(null)
   const activeKlasData = activeKlas === null ? null : klasifikasiChart[activeKlas]
@@ -126,6 +145,9 @@ export default function AdminDashboard() {
       </div>
       {errorStats && (
         <p className="text-xs text-red-300">Gagal memuat statistik: {errorStats}</p>
+      )}
+      {errorAgg && (
+        <p className="text-xs text-red-300">Gagal memuat data chart: {errorAgg}</p>
       )}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Pie Chart Distribusi Klasifikasi Pengaduan */}
@@ -177,6 +199,9 @@ export default function AdminDashboard() {
           className="bg-blue-900/40 border-blue-700/40"
         />
       </div>
+      {(loadingAgg) && (
+        <p className="text-xs text-blue-300/70">Memuat data chart…</p>
+      )}
     </div>
   )
 }
