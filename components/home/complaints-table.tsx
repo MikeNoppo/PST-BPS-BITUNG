@@ -122,6 +122,13 @@ export function ComplaintsTable({ initialComplaints, variant = 'default' }: Prop
             </TableRow>
           </TableHeader>
           <TableBody>
+            {complaints.length === 0 && (
+              <TableRow className={cn(isDark && 'border-blue-800/50')}> 
+                <TableCell colSpan={4} className={cn('py-12 text-center text-sm', isDark ? 'text-blue-200/70' : 'text-gray-500')}> 
+                  Belum ada pengaduan yang dapat ditampilkan.
+                </TableCell>
+              </TableRow>
+            )}
             {complaints.map(c => (
               <TableRow key={c.id} className={cn(isDark && 'hover:bg-blue-800/40 border-blue-800/50')}> 
                 <TableCell className="font-medium">{c.id}</TableCell>
