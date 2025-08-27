@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendWhatsAppMessage, isFonnteSuccess, normalizePhone } from '@/lib/fonnte'
+import { apiError } from '@/lib/api-response'
 
 function humanStatus(s: string): string {
   switch (s) {
@@ -14,14 +15,14 @@ function humanStatus(s: string): string {
 export async function POST(_req: Request, context: { params: Promise<{ code: string }> | { code: string } }) {
   const p = 'then' in context.params ? await (context.params as Promise<{ code: string }>) : (context.params as { code: string })
   const rawCode = p.code
-  if (!rawCode) return NextResponse.json({ ok: false, error: 'MISSING_CODE' }, { status: 400 })
+  if (!rawCode) return apiError({ code: 'MISSING_CODE', message: 'Kode wajib diisi', status: 400 })
   let body: any = {}
   try { body = await _req.json().catch(() => ({})) } catch {}
 
   try {
     const code = decodeURIComponent(rawCode).trim().toUpperCase()
     const complaint = await prisma.complaint.findFirst({ where: { code }, select: { id: true, code: true, status: true, rtl: true, completedAt: true, phone: true } })
-    if (!complaint) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 })
+  if (!complaint) return apiError({ code: 'NOT_FOUND', message: 'Pengaduan tidak ditemukan', status: 404 })
 
     const status = (body.statusOverride || complaint.status) as string
     const rtl = (body.rtlOverride ?? complaint.rtl) as string | null
@@ -80,11 +81,11 @@ export async function POST(_req: Request, context: { params: Promise<{ code: str
     }
 
     if (!sent) {
-      return NextResponse.json({ ok: false, sent, provider: sendResp }, { status: 500 })
+      return apiError({ code: 'SEND_FAILED', message: 'Gagal mengirim notifikasi', details: sendResp, status: 500 })
     }
     return NextResponse.json({ ok: true, sent })
   } catch (e) {
     console.error('POST /api/pengaduan/[code]/notify error', e)
-    return NextResponse.json({ ok: false, error: 'SERVER_ERROR' }, { status: 500 })
+    return apiError({ code: 'SERVER_ERROR', message: 'Terjadi kesalahan server', status: 500 })
   }
 }

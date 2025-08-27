@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { sendWhatsAppMessage, isFonnteSuccess } from '@/lib/fonnte'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/api-response'
 
 interface RL { perIp: Record<string, number[]> }
 const g = globalThis as any
@@ -23,13 +24,13 @@ export async function POST(req: Request) {
   const internalKey = process.env.INTERNAL_API_KEY
   if (internalKey) {
     const provided = req.headers.get('x-internal-key')
-    if (provided !== internalKey) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+    if (provided !== internalKey) return apiError({ code: 'UNAUTHORIZED', message: 'Tidak diizinkan', status: 401 })
   }
   const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown'
-  if (!rateLimit(ip)) return NextResponse.json({ error: 'RATE_LIMIT' }, { status: 429 })
+  if (!rateLimit(ip)) return apiError({ code: 'RATE_LIMIT', message: 'Terlalu banyak permintaan', status: 429 })
 
   const body = await req.json().catch(() => null)
-  if (!body) return NextResponse.json({ error: 'INVALID_JSON' }, { status: 400 })
+  if (!body) return apiError({ code: 'INVALID_JSON', message: 'JSON tidak valid', status: 400 })
 
   const schema = z.object({
     target: z.union([z.string(), z.array(z.string()).nonempty()]),
@@ -42,10 +43,10 @@ export async function POST(req: Request) {
     complaintCode: z.string().max(30).optional(),
   })
   const parsed = schema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })
+  if (!parsed.success) return apiError({ code: 'VALIDATION_ERROR', message: 'Input tidak valid', details: parsed.error.flatten(), status: 400 })
   const { target, message, url, filename, schedule, delay, countryCode, complaintCode } = parsed.data
 
-  if (!process.env.FONNTE_TOKEN) return NextResponse.json({ error: 'CONFIG_ERROR', message: 'FONNTE_TOKEN missing' }, { status: 500 })
+  if (!process.env.FONNTE_TOKEN) return apiError({ code: 'CONFIG_ERROR', message: 'Konfigurasi FONNTE_TOKEN hilang', status: 500 })
   const resp = await sendWhatsAppMessage(target, message, { url, filename, schedule, delay: delay?.toString(), countryCode })
   // If complaintCode provided, attempt to link notification
   if (complaintCode) {
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
     }
   }
   if ((resp as any).error || (resp as any).status === false) {
-    return NextResponse.json({ error: 'SEND_FAILED', provider: resp }, { status: 500 })
+    return apiError({ code: 'SEND_FAILED', message: 'Gagal mengirim pesan', details: resp, status: 500 })
   }
   return NextResponse.json({ data: resp })
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { humanizeClassification } from '@/lib/humanize'
+import { apiError } from '@/lib/api-response'
 
 // GET /api/pengaduan/aggregate?year=2025
 // Mengembalikan:
@@ -18,7 +19,7 @@ export async function GET(req: Request) {
     const currentYear = now.getFullYear()
     const year = yearParam ? parseInt(yearParam, 10) : currentYear
     if (isNaN(year) || year < 2000 || year > currentYear + 1) {
-      return NextResponse.json({ error: 'INVALID_YEAR' }, { status: 400 })
+      return apiError({ code: 'INVALID_YEAR', message: 'Tahun tidak valid', status: 400 })
     }
 
     const start = new Date(Date.UTC(year, 0, 1, 0, 0, 0))
@@ -51,15 +52,15 @@ export async function GET(req: Request) {
       count: Number(r.count)
     }))
 
-    return NextResponse.json({
+  return NextResponse.json({ data: {
       year,
       monthly,
       classification,
       generatedAt: new Date().toISOString()
-    })
+  } })
   } catch (e) {
     console.error('GET /api/pengaduan/aggregate error', e)
-    return NextResponse.json({ error: 'SERVER_ERROR' }, { status: 500 })
+  return apiError({ code: 'SERVER_ERROR', message: 'Terjadi kesalahan server', status: 500 })
   }
 }
 

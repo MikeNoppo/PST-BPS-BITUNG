@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { humanizeClassification } from '@/lib/humanize'
+import { apiError } from '@/lib/api-response'
 
 // GET /api/pengaduan/[code] -> detail ringkas untuk pelacakan publik
 export async function GET(
@@ -12,9 +13,7 @@ export async function GET(
 ) {
   const p = 'then' in context.params ? await (context.params as Promise<{ code: string }>) : (context.params as { code: string })
   const rawCode = p.code
-  if (!rawCode) {
-    return NextResponse.json({ error: 'MISSING_CODE' }, { status: 400 })
-  }
+  if (!rawCode) return apiError({ code: 'MISSING_CODE', message: 'Kode wajib diisi', status: 400 })
   try {
     const code = decodeURIComponent(rawCode).trim().toUpperCase()
   const complaint = await prisma.complaint.findFirst({
@@ -33,9 +32,7 @@ export async function GET(
         }
       }
     })
-    if (!complaint) {
-      return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 })
-    }
+  if (!complaint) return apiError({ code: 'NOT_FOUND', message: 'Pengaduan tidak ditemukan', status: 404 })
 
     // Derive keterangan: prioritaskan note terbaru, fallback ke rtl, fallback generic by status
     const latest = complaint.updates[0]
@@ -68,7 +65,7 @@ export async function GET(
     })
   } catch (e) {
     console.error('GET /api/pengaduan/[code] error', e)
-    return NextResponse.json({ error: 'SERVER_ERROR' }, { status: 500 })
+    return apiError({ code: 'SERVER_ERROR', message: 'Terjadi kesalahan server', status: 500 })
   }
 }
 
@@ -79,14 +76,12 @@ export async function PATCH(
 ) {
   // Auth guard: only authenticated (ADMIN or STAFF) can update
   const session = await getServerSession(authOptions)
-  if (!session || !(session as any).user?.role) {
-    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
-  }
+  if (!session || !(session as any).user?.role) return apiError({ code: 'UNAUTHORIZED', message: 'Tidak diizinkan', status: 401 })
   const p = 'then' in context.params ? await (context.params as Promise<{ code: string }>) : (context.params as { code: string })
   const rawCode = p.code
-  if (!rawCode) return NextResponse.json({ error: 'MISSING_CODE' }, { status: 400 })
+  if (!rawCode) return apiError({ code: 'MISSING_CODE', message: 'Kode wajib diisi', status: 400 })
   const body = await req.json().catch(() => null)
-  if (!body) return NextResponse.json({ error: 'INVALID_JSON' }, { status: 400 })
+  if (!body) return apiError({ code: 'INVALID_JSON', message: 'JSON tidak valid', status: 400 })
 
   const schema = z.object({
     rtl: z.string().max(1500).optional(),
@@ -94,12 +89,12 @@ export async function PATCH(
     tanggalSelesai: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
   })
   const parsed = schema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })
+  if (!parsed.success) return apiError({ code: 'VALIDATION_ERROR', message: 'Input tidak valid', details: parsed.error.flatten(), status: 400 })
 
   try {
     const code = decodeURIComponent(rawCode).trim().toUpperCase()
     const existing = await prisma.complaint.findFirst({ where: { code }, select: { id: true, status: true } })
-    if (!existing) return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 })
+  if (!existing) return apiError({ code: 'NOT_FOUND', message: 'Pengaduan tidak ditemukan', status: 404 })
 
     const { rtl, status, tanggalSelesai } = parsed.data
     const data: any = {}
@@ -126,7 +121,7 @@ export async function PATCH(
     } })
   } catch (e) {
     console.error('PATCH /api/pengaduan/[code] error', e)
-    return NextResponse.json({ error: 'SERVER_ERROR' }, { status: 500 })
+    return apiError({ code: 'SERVER_ERROR', message: 'Terjadi kesalahan server', status: 500 })
   }
 }
 
@@ -136,20 +131,18 @@ export async function DELETE(
   context: { params: Promise<{ code: string }> | { code: string } }
 ) {
   const session = await getServerSession(authOptions)
-  if (!session || (session as any).user?.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
-  }
+  if (!session || (session as any).user?.role !== 'ADMIN') return apiError({ code: 'FORBIDDEN', message: 'Terbatas untuk ADMIN', status: 403 })
   const p = 'then' in context.params ? await (context.params as Promise<{ code: string }>) : (context.params as { code: string })
   const rawCode = p.code
-  if (!rawCode) return NextResponse.json({ error: 'MISSING_CODE' }, { status: 400 })
+  if (!rawCode) return apiError({ code: 'MISSING_CODE', message: 'Kode wajib diisi', status: 400 })
   try {
     const code = decodeURIComponent(rawCode).trim().toUpperCase()
     const existing = await prisma.complaint.findFirst({ where: { code }, select: { id: true } })
-    if (!existing) return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 })
+  if (!existing) return apiError({ code: 'NOT_FOUND', message: 'Pengaduan tidak ditemukan', status: 404 })
     await prisma.complaint.delete({ where: { id: existing.id } })
     return NextResponse.json({ success: true })
   } catch (e) {
     console.error('DELETE /api/pengaduan/[code] error', e)
-    return NextResponse.json({ error: 'SERVER_ERROR' }, { status: 500 })
+    return apiError({ code: 'SERVER_ERROR', message: 'Terjadi kesalahan server', status: 500 })
   }
 }
