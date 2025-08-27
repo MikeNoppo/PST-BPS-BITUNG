@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { sendWhatsAppMessage, isFonnteSuccess } from '@/lib/fonnte'
+import { humanizeClassification, humanizeStatus } from '@/lib/humanize'
 
 // ------------------ Rate Limiting & Anti-Spam ------------------
 // In-memory store (will reset on redeploy / server restart). Cukup sebagai lapisan proteksi dasar.
@@ -11,6 +12,7 @@ import { sendWhatsAppMessage, isFonnteSuccess } from '@/lib/fonnte'
 interface SubmissionMeta {
   t: number // timestamp ms
   email: string
+  ip: string
   hash: string // hash ringkas deskripsi
 }
 
@@ -95,7 +97,7 @@ function checkAndRecordLimits(ip: string, email: string, description: string): {
   // Duplicate content check (same email OR same IP + hash deskripsi)
   const normalized = description.trim().toLowerCase().replace(/\s+/g, ' ')
   const h = hashContent(normalized)
-  const duplicate = rateStore.recent.find(r => r.hash === h && (r.email === email || ip === ip))
+  const duplicate = rateStore.recent.find(r => r.hash === h && (r.email === email || r.ip === ip))
   if (duplicate) {
     return { ok: false, code: 'DUPLICATE_CONTENT', message: 'Konten pengaduan identik telah dikirim baru-baru ini.' }
   }
@@ -103,7 +105,7 @@ function checkAndRecordLimits(ip: string, email: string, description: string): {
   // Record
   rateStore.perIp[ip].push(now)
   rateStore.perEmail[email].push(now)
-  rateStore.recent.push({ t: now, email, hash: h })
+  rateStore.recent.push({ t: now, email, ip, hash: h })
   return { ok: true }
 }
 // ---------------------------------------------------------------
@@ -251,7 +253,7 @@ export async function GET(req: Request) {
           status: true,
           reporterName: true,
           email: true,
-            phone: true,
+          phone: true,
           description: true,
           rtl: true,
           completedAt: true,
@@ -280,8 +282,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ data, page, limit, total })
     }
 
-    // public shape
-    const data = (complaints as any).map((c: any) => ({
+  // public shape
+  const data = (complaints as any).map((c: any) => ({
       id: c.code,
       tanggal: c.createdAt.toISOString(),
       klasifikasi: humanizeClassification(c.classification),
@@ -294,21 +296,4 @@ export async function GET(req: Request) {
   }
 }
 
-function humanizeClassification(c: string): string {
-  const map: Record<string,string> = {
-    PERSYARATAN_LAYANAN: 'Persyaratan Layanan',
-    PROSEDUR_LAYANAN: 'Prosedur Layanan',
-    WAKTU_PELAYANAN: 'Waktu Pelayanan',
-    BIAYA_TARIF_PELAYANAN: 'Biaya/Tarif Pelayanan',
-    PRODUK_PELAYANAN: 'Produk Pelayanan',
-    KOMPETENSI_PELAKSANA_PELAYANAN: 'Kompetensi Pelaksana Pelayanan',
-    PERILAKU_PETUGAS_PELAYANAN: 'Perilaku Petugas Pelayanan',
-    SARANA_DAN_PRASARANA: 'Sarana dan Prasarana'
-  }
-  return map[c] || c
-}
-
-function humanizeStatus(s: string): string {
-  const map: Record<string,string> = { BARU: 'Baru', PROSES: 'Proses', SELESAI: 'Selesai' }
-  return map[s] || s
-}
+// (humanize helpers now centralized in lib/humanize.ts)

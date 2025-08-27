@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { humanizeClassification } from '@/lib/humanize'
 
 // GET /api/pengaduan/[code] -> detail ringkas untuk pelacakan publik
 export async function GET(
@@ -14,7 +17,7 @@ export async function GET(
   }
   try {
     const code = decodeURIComponent(rawCode).trim().toUpperCase()
-    const complaint = await prisma.complaint.findFirst({
+  const complaint = await prisma.complaint.findFirst({
       where: { code },
       select: {
         code: true,
@@ -58,7 +61,7 @@ export async function GET(
         code: complaint.code,
         createdAt: complaint.createdAt,
         status: complaint.status,
-        classification: complaint.classification,
+  classification: humanizeClassification(complaint.classification),
         keterangan,
         latestUpdate: latest || null
       }
@@ -74,6 +77,11 @@ export async function PATCH(
   req: Request,
   context: { params: Promise<{ code: string }> | { code: string } }
 ) {
+  // Auth guard: only authenticated (ADMIN or STAFF) can update
+  const session = await getServerSession(authOptions)
+  if (!session || !(session as any).user?.role) {
+    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+  }
   const p = 'then' in context.params ? await (context.params as Promise<{ code: string }>) : (context.params as { code: string })
   const rawCode = p.code
   if (!rawCode) return NextResponse.json({ error: 'MISSING_CODE' }, { status: 400 })
@@ -127,6 +135,10 @@ export async function DELETE(
   _req: Request,
   context: { params: Promise<{ code: string }> | { code: string } }
 ) {
+  const session = await getServerSession(authOptions)
+  if (!session || (session as any).user?.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
+  }
   const p = 'then' in context.params ? await (context.params as Promise<{ code: string }>) : (context.params as { code: string })
   const rawCode = p.code
   if (!rawCode) return NextResponse.json({ error: 'MISSING_CODE' }, { status: 400 })

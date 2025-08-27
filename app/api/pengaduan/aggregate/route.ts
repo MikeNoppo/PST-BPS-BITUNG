@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { humanizeClassification } from '@/lib/humanize'
 
 // GET /api/pengaduan/aggregate?year=2025
 // Mengembalikan:
@@ -62,16 +63,4 @@ export async function GET(req: Request) {
   }
 }
 
-function humanizeClassification(c: string): string {
-  const map: Record<string,string> = {
-    PERSYARATAN_LAYANAN: 'Persyaratan Layanan',
-    PROSEDUR_LAYANAN: 'Prosedur Layanan',
-    WAKTU_PELAYANAN: 'Waktu Pelayanan',
-    BIAYA_TARIF_PELAYANAN: 'Biaya/Tarif Pelayanan',
-    PRODUK_PELAYANAN: 'Produk Pelayanan',
-    KOMPETENSI_PELAKSANA_PELAYANAN: 'Kompetensi Pelaksana Pelayanan',
-    PERILAKU_PETUGAS_PELAYANAN: 'Perilaku Petugas Pelayanan',
-    SARANA_DAN_PRASARANA: 'Sarana dan Prasarana'
-  }
-  return map[c] || c
-}
+// humanize moved to lib/humanize.ts
