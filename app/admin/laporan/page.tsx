@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -24,10 +24,13 @@ type Complaint = {
 
 export default function AdminLaporan() {
   const [selectedMonth, setSelectedMonth] = useState('01')
+  const [userChangedMonth, setUserChangedMonth] = useState(false)
   const [selectedYear, setSelectedYear] = useState('')
   const [reportType, setReportType] = useState('monthly')
   const [allYearData, setAllYearData] = useState<Complaint[]>([])
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const controllerRef = useRef<AbortController | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [years, setYears] = useState<string[]>([])
 
@@ -37,32 +40,47 @@ export default function AdminLaporan() {
       const res = await fetch('/api/pengaduan/years')
       if (!res.ok) throw new Error('Gagal memuat tahun')
       const json = await res.json()
-      const list: string[] = json.years || []
+  const list: string[] = json.years || json.data?.years || []
       setYears(list)
       if (list.length && !selectedYear) setSelectedYear(list[0])
     } catch {}
   }, [selectedYear])
 
   const fetchYearData = useCallback(async (year: string) => {
+    // Abort any ongoing fetch for previous year
+    if (controllerRef.current) {
+      try { controllerRef.current.abort() } catch {}
+    }
+    const controller = new AbortController()
+    controllerRef.current = controller
     setLoading(true); setError(null)
     const limit = 50
     let page = 1
     let acc: Complaint[] = []
     try {
       while (true) {
-        const res = await fetch(`/api/pengaduan?admin=1&limit=${limit}&page=${page}`)
+        const res = await fetch(`/api/pengaduan?admin=1&year=${year}&limit=${limit}&page=${page}`, { signal: controller.signal })
         if (!res.ok) throw new Error('Fetch gagal')
         const json = await res.json()
-        const data: Complaint[] = (json.data || []).filter((c: any) => new Date(c.tanggal).getFullYear().toString() === year)
+        const data: Complaint[] = json.data || []
         acc = acc.concat(data)
         if (!json.data || json.data.length < limit) break
         page += 1
         if (page > 20) break // safety cap
       }
-      setAllYearData(acc)
+      // If aborted, skip state update
+      if (!controller.signal.aborted) {
+        setAllYearData(acc)
+      }
     } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        // Silent abort
+        return
+      }
       setError(e.message || 'Gagal memuat data')
-    } finally { setLoading(false) }
+    } finally {
+      if (!controller.signal.aborted) setLoading(false)
+    }
   }, [])
 
   // Initial fetch of years
@@ -70,6 +88,28 @@ export default function AdminLaporan() {
 
   // Fetch whenever selected year changes (after initialization)
   useEffect(() => { if (selectedYear) fetchYearData(selectedYear) }, [selectedYear, fetchYearData])
+  // Reset month change flag when year changes
+  useEffect(() => { setUserChangedMonth(false) }, [selectedYear])
+  // Auto-select month with data if current month empty (unless user changed)
+  useEffect(() => {
+    if (reportType !== 'monthly') return
+    if (!allYearData.length) return
+    if (userChangedMonth) return
+    const monthsWithData = new Set(allYearData.map(c => String(new Date(c.tanggal).getMonth() + 1).padStart(2,'0')))
+    if (!monthsWithData.has(selectedMonth)) {
+      const newestMonth = String(new Date(allYearData[0].tanggal).getMonth() + 1).padStart(2,'0')
+      setSelectedMonth(newestMonth)
+    }
+  }, [allYearData, selectedMonth, userChangedMonth, reportType])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (controllerRef.current) {
+        try { controllerRef.current.abort() } catch {}
+      }
+    }
+  }, [])
 
   const monthName = (m: string) => MONTHS.find(mm => mm.value === m)?.label || m
 
@@ -98,65 +138,104 @@ export default function AdminLaporan() {
       status: c.status,
     }))
 
-  const exportMonthlyToCSV = () => {
-  const headers = ['No','Tanggal Pengaduan','Nama Pelapor','Email','No WhatsApp','Isi Pengaduan','Klasifikasi','RTL','Status','Tanggal Selesai']
-    const monthLabel = monthName(selectedMonth)
-    exportToCSV(
-      monthlyData,
-      headers,
-      `laporan-bulanan-${monthLabel}-${selectedYear}.csv`,
-      (item) => [
-        item.no,
-        new Date(item.tanggal).toLocaleDateString('id-ID'),
-        item.nama,
-        item.email,
-        item.noWA,
-        item.isiPengaduan,
-        item.klasifikasi,
-        item.rtl,
-        item.status,
-  item.tanggalSelesai !== '-' ? new Date(item.tanggalSelesai).toLocaleDateString('id-ID') : '-'
-      ]
-    )
+  type ExportFormat = 'csv' | 'excel'
+  const handleExport = async (fmt: ExportFormat) => {
+    if (!selectedYear) return
+    setExporting(true)
+    try {
+      const isMonthly = reportType === 'monthly'
+      if (isMonthly) {
+        const headers = ['No','Tanggal Pengaduan','Nama Pelapor','Email','No WhatsApp','Isi Pengaduan','Klasifikasi','RTL','Status','Tanggal Selesai']
+        const monthLabel = monthName(selectedMonth)
+        const filename = `laporan-bulanan-${monthLabel}-${selectedYear}.${fmt === 'csv' ? 'csv' : 'xls'}`
+        const mapper = (item: any) => [
+          item.no,
+          new Date(item.tanggal).toLocaleDateString('id-ID'),
+          item.nama,
+          item.email,
+          item.noWA,
+          item.isiPengaduan,
+          item.klasifikasi,
+          item.rtl,
+          item.status,
+          item.tanggalSelesai !== '-' ? new Date(item.tanggalSelesai).toLocaleDateString('id-ID') : '-'
+        ]
+        fmt === 'csv'
+          ? exportToCSV(monthlyData, headers, filename, mapper)
+          : exportToExcel(monthlyData, headers, filename, mapper)
+      } else {
+        const headers = ['No','Bulan','Klasifikasi Pengaduan','Status Penanganan']
+        const filename = `laporan-tahunan-${selectedYear}.${fmt === 'csv' ? 'csv' : 'xls'}`
+        const mapper = (item: any) => [item.no, item.bulan, item.klasifikasi, item.status]
+        fmt === 'csv'
+          ? exportToCSV(annualData, headers, filename, mapper)
+          : exportToExcel(annualData, headers, filename, mapper)
+      }
+    } finally {
+      setExporting(false)
+    }
   }
-  const exportAnnualToCSV = () => {
-    const headers = ['No','Bulan','Klasifikasi Pengaduan','Status Penanganan']
-    exportToCSV(
-      annualData,
-      headers,
-      `laporan-tahunan-${selectedYear}.csv`,
-      (item) => [item.no, item.bulan, item.klasifikasi, item.status]
-    )
+
+  // Annual summary table (12 rows) for Google Sheets import
+  const buildAnnualSummaryMatrix = () => {
+    // Klasifikasi mapping order (as per schema order) -> label human
+    const order: string[] = [
+      'PERSYARATAN LAYANAN',
+      'PROSEDUR LAYANAN',
+      'WAKTU PELAYANAN',
+      'BIAYA / TARIF PELAYANAN',
+      'PRODUK PELAYANAN',
+      'KOMPETENSI PELAKSANA PELAYANAN',
+      'PERILAKU PETUGAS PELAYANAN',
+      'SARANA DAN PRASARANA'
+    ]
+    // Normalisasi nama klasifikasi pada data (sudah humanize di API)
+    const counters = Array.from({ length: 12 }, (_, i) => ({
+      bulanIndex: i,
+      counts: Array(order.length).fill(0) as number[],
+      proses: 0,
+      selesai: 0,
+    }))
+    allYearData.forEach(c => {
+      const d = new Date(c.tanggal)
+      const m = d.getMonth() // 0-11
+      const idx = counters[m]
+      const klas = c.klasifikasi.toUpperCase()
+      const pos = order.findIndex(o => klas.includes(o.split(' / ')[0]))
+      if (pos >= 0) idx.counts[pos] += 1
+      if (c.status === 'Proses') idx.proses += 1
+      if (c.status === 'Selesai') idx.selesai += 1
+    })
+    return { order, rows: counters }
   }
-  const exportMonthlyToExcel = () => {
-  const headers = ['No','Tanggal Pengaduan','Nama Pelapor','Email','No WhatsApp','Isi Pengaduan','Klasifikasi','RTL','Status','Tanggal Selesai']
-    const monthLabel = monthName(selectedMonth)
-    exportToExcel(
-      monthlyData,
-      headers,
-      `laporan-bulanan-${monthLabel}-${selectedYear}.xls`,
-      (item) => [
-        item.no,
-        new Date(item.tanggal).toLocaleDateString('id-ID'),
-        item.nama,
-        item.email,
-        item.noWA,
-        item.isiPengaduan,
-        item.klasifikasi,
-        item.rtl,
-        item.status,
-  item.tanggalSelesai !== '-' ? new Date(item.tanggalSelesai).toLocaleDateString('id-ID') : '-'
-      ]
-    )
-  }
-  const exportAnnualToExcel = () => {
-    const headers = ['No','Bulan','Klasifikasi Pengaduan','Status Penanganan']
-    exportToExcel(
-      annualData,
-      headers,
-      `laporan-tahunan-${selectedYear}.xls`,
-      (item) => [item.no, item.bulan, item.klasifikasi, item.status]
-    )
+
+  const exportAnnualSheets = () => {
+    const { order, rows } = buildAnnualSummaryMatrix()
+    const header = ['No.', 'Bulan', ...order.map((_,i)=> (i+1).toString()), 'Dalam Proses', 'Selesai']
+    const monthLabels = MONTHS.map(m=>m.label)
+    const body = rows.map((r,i)=> [
+      i+1,
+      monthLabels[i],
+      ...r.counts,
+      r.proses || '0',
+      r.selesai ? r.selesai : 'NIHIL'
+    ])
+    const footerLines = order.map((o,i)=> `${i+1}. ${o[0] + o.slice(1).toLowerCase()}`)
+    const csvLines = [header, ...body]
+    // Add blank line and footnotes
+    csvLines.push([])
+    footerLines.forEach(l => csvLines.push([`*) ${l}`]))
+    const csvContent = csvLines.map(line => line.map(f => {
+      const s = String(f)
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s
+    }).join(',')).join('\n')
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `laporan-tahunan-ringkas-${selectedYear}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   const getStatusBadge = (status: string) => {
@@ -199,7 +278,7 @@ export default function AdminLaporan() {
             {reportType === 'monthly' && (
               <div>
                 <label className="block text-sm font-medium mb-1 text-blue-200">Bulan</label>
-                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <Select value={selectedMonth} onValueChange={(val) => { setSelectedMonth(val); setUserChangedMonth(true) }}>
                   <SelectTrigger className="w-32 bg-blue-950/40 border-blue-700/40 text-blue-50">
                     <SelectValue />
                   </SelectTrigger>
@@ -227,18 +306,27 @@ export default function AdminLaporan() {
               </Select>
             </div>
             <div className="flex space-x-2">
-              <Button onClick={handlePrint} variant="soft" className="flex items-center space-x-2">
+              <Button onClick={handlePrint} variant="soft" className="flex items-center space-x-2" disabled={!selectedYear || loading || exporting}>
                 <Printer className="w-4 h-4" />
                 <span>Cetak</span>
               </Button>
               <ExportDropdown
-                onCSV={reportType === 'monthly' ? exportMonthlyToCSV : exportAnnualToCSV}
-                onExcel={reportType === 'monthly' ? exportMonthlyToExcel : exportAnnualToExcel}
+                onCSV={() => handleExport('csv')}
+                onExcel={() => handleExport('excel')}
+                disabled={!selectedYear || loading || exporting}
+                count={reportType === 'monthly' ? monthlyData.length : annualData.length}
+                onSheets={reportType === 'annual' ? exportAnnualSheets : undefined}
               />
             </div>
           </div>
         </CardHeader>
         <CardContent>
+              {/* Validation: no year selected */}
+              {!selectedYear && (
+                <div className="p-4 mb-4 border border-amber-500/40 bg-amber-900/20 text-amber-100 rounded-md text-sm">
+                  Pilih tahun terlebih dahulu untuk menampilkan data laporan.
+                </div>
+              )}
               {/* Report Header for Print */}
               <div className="hidden print:block mb-6 text-center">
                 <h1 className="text-2xl font-bold text-blue-900 mb-2">
@@ -254,7 +342,7 @@ export default function AdminLaporan() {
               </div>
 
               {/* Monthly Report */}
-              {reportType === 'monthly' && (
+              {reportType === 'monthly' && selectedYear && (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader className="bg-blue-900/60">
@@ -309,7 +397,7 @@ export default function AdminLaporan() {
               )}
 
               {/* Annual Report */}
-              {reportType === 'annual' && (
+              {reportType === 'annual' && selectedYear && (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader className="bg-blue-900/60">

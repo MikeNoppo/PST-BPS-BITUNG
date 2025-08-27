@@ -250,16 +250,27 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
-    const limitParam = searchParams.get('limit')
-    const pageParam = searchParams.get('page')
+  const limitParam = searchParams.get('limit')
+  const pageParam = searchParams.get('page')
     const adminFlag = searchParams.get('admin') // presence => admin view
+  const yearParam = searchParams.get('year') // optional year filter (YYYY)
     const limit = Math.min(Math.max(parseInt(limitParam || '5', 10) || 5, 1), 50)
     const page = Math.max(parseInt(pageParam || '1', 10) || 1, 1)
     const skip = (page - 1) * limit
 
+    // Build where clause
+    const where: any = {}
+    if (yearParam && /^\d{4}$/.test(yearParam)) {
+      const yearNum = parseInt(yearParam, 10)
+      const start = new Date(Date.UTC(yearNum, 0, 1, 0, 0, 0))
+      const end = new Date(Date.UTC(yearNum + 1, 0, 1, 0, 0, 0))
+      where.createdAt = { gte: start, lt: end }
+    }
+
     const [total, complaints] = await Promise.all([
-      prisma.complaint.count(),
+      prisma.complaint.count({ where }),
       prisma.complaint.findMany({
+        where,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,

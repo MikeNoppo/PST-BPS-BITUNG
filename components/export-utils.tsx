@@ -1,6 +1,6 @@
 "use client"
 
-import { Download, Loader2 } from 'lucide-react'
+import { Download, Loader2, FileSpreadsheet } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -88,17 +88,21 @@ export const escapeCSVField = (field: string) => {
 export function ExportDropdown({
   onCSV,
   onExcel,
+  onSheets,
   size = 'sm',
   label = 'Export',
   count,
-  largeThreshold = 5000
+  largeThreshold = 5000,
+  disabled = false
 }: {
   onCSV: () => Promise<void> | void
   onExcel: () => Promise<void> | void
+  onSheets?: () => Promise<void> | void
   size?: 'sm' | 'default'
   label?: string
   count?: number
   largeThreshold?: number
+  disabled?: boolean
 }) {
   const [loading, setLoading] = useState<'csv' | 'excel' | null>(null)
   const isLarge = typeof count === 'number' && count >= largeThreshold
@@ -115,7 +119,14 @@ export function ExportDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size={size} className="gap-2" disabled={!!loading}>
+        <Button
+          variant="outline"
+          size={size}
+          className="gap-2"
+          disabled={!!loading || disabled}
+          aria-disabled={!!loading || disabled}
+          aria-busy={!!loading}
+        >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
           {loading ? 'Memproses...' : label}
           {isLarge && !loading && <span className="text-[10px] font-medium text-orange-600 border border-orange-200 bg-orange-50 px-1 py-0.5 rounded">Besar</span>}
@@ -128,19 +139,28 @@ export function ExportDropdown({
           </div>
         )}
         <DropdownMenuItem
-          disabled={!!loading}
+          disabled={!!loading || disabled}
           onClick={() => wrap('csv', () => onCSV())}
           className="cursor-pointer"
         >
           {loading === 'csv' && <Loader2 className="w-3 h-3 animate-spin" />} CSV
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={!!loading}
+          disabled={!!loading || disabled}
           onClick={() => wrap('excel', () => onExcel())}
           className="cursor-pointer"
         >
           {loading === 'excel' && <Loader2 className="w-3 h-3 animate-spin" />} Excel
         </DropdownMenuItem>
+        {onSheets && (
+          <DropdownMenuItem
+            disabled={!!loading || disabled}
+            onClick={() => wrap('excel', () => onSheets())}
+            className="cursor-pointer"
+          >
+            <FileSpreadsheet className="w-3 h-3 mr-1" /> Sheets
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )
