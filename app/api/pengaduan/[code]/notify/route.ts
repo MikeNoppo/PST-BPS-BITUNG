@@ -11,8 +11,9 @@ function humanStatus(s: string): string {
   }
 }
 
-export async function POST(_req: Request, context: { params: { code: string } }) {
-  const rawCode = context.params.code
+export async function POST(_req: Request, context: { params: Promise<{ code: string }> | { code: string } }) {
+  const p = 'then' in context.params ? await (context.params as Promise<{ code: string }>) : (context.params as { code: string })
+  const rawCode = p.code
   if (!rawCode) return NextResponse.json({ ok: false, error: 'MISSING_CODE' }, { status: 400 })
   let body: any = {}
   try { body = await _req.json().catch(() => ({})) } catch {}

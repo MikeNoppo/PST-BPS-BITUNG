@@ -5,9 +5,10 @@ import { z } from 'zod'
 // GET /api/pengaduan/[code] -> detail ringkas untuk pelacakan publik
 export async function GET(
   _req: Request,
-  { params }: { params: { code: string } }
+  context: { params: Promise<{ code: string }> | { code: string } }
 ) {
-  const rawCode = params.code
+  const p = 'then' in context.params ? await (context.params as Promise<{ code: string }>) : (context.params as { code: string })
+  const rawCode = p.code
   if (!rawCode) {
     return NextResponse.json({ error: 'MISSING_CODE' }, { status: 400 })
   }
@@ -71,9 +72,10 @@ export async function GET(
 // PATCH /api/pengaduan/[code] -> update RTL, status, completedAt (YYYY-MM-DD)
 export async function PATCH(
   req: Request,
-  { params }: { params: { code: string } }
+  context: { params: Promise<{ code: string }> | { code: string } }
 ) {
-  const rawCode = params.code
+  const p = 'then' in context.params ? await (context.params as Promise<{ code: string }>) : (context.params as { code: string })
+  const rawCode = p.code
   if (!rawCode) return NextResponse.json({ error: 'MISSING_CODE' }, { status: 400 })
   const body = await req.json().catch(() => null)
   if (!body) return NextResponse.json({ error: 'INVALID_JSON' }, { status: 400 })
@@ -123,9 +125,10 @@ export async function PATCH(
 // DELETE /api/pengaduan/[code]
 export async function DELETE(
   _req: Request,
-  { params }: { params: { code: string } }
+  context: { params: Promise<{ code: string }> | { code: string } }
 ) {
-  const rawCode = params.code
+  const p = 'then' in context.params ? await (context.params as Promise<{ code: string }>) : (context.params as { code: string })
+  const rawCode = p.code
   if (!rawCode) return NextResponse.json({ error: 'MISSING_CODE' }, { status: 400 })
   try {
     const code = decodeURIComponent(rawCode).trim().toUpperCase()

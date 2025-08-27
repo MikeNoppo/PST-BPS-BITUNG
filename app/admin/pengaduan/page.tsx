@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Edit, Search, Trash2 } from 'lucide-react'
+import { Edit, Search, Trash2, Check } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog'
 import { exportToCSV, exportToExcel, formatDateForExport, ExportDropdown } from '@/components/export-utils'
@@ -111,15 +111,25 @@ export default function PengaduanPage() {
   // toast helper now provided globally
 
   const [saving, setSaving] = useState(false)
+  const [notifSent, setNotifSent] = useState(false)
+  const [notifFailed, setNotifFailed] = useState(false)
   const hasChanges = selected && original && (
     selected.rtl !== original.rtl ||
     selected.status !== original.status ||
     (selected.tanggalSelesai || '') !== (original.tanggalSelesai || '')
   )
+  const statusChanged = selected && original && selected.status !== original.status
+
+  // Debounce state
+  const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null)
 
   const save = async () => {
-    if (!selected || !hasChanges) return
+    if (!selected || !hasChanges || saving) return
+    // Debounce: block if called again within 1s
+    if (debounceTimeout) return
     setSaving(true)
+    const timeout = setTimeout(() => setDebounceTimeout(null), 1000)
+    setDebounceTimeout(timeout)
     try {
       const payload = {
         rtl: selected.rtl,
@@ -131,23 +141,37 @@ export default function PengaduanPage() {
       const json = await res.json()
       setItems(prev => prev.map(p => p.id === selected.id ? { ...p, rtl: json.data.rtl, status: selected.status, tanggalSelesai: selected.tanggalSelesai } : p))
 
-      // Kirim notifikasi status otomatis setelah perubahan berhasil
-      try {
-        const notifyPayload = {
-          statusOverride: payload.status,
-          rtlOverride: payload.rtl,
-          tanggalSelesaiOverride: payload.tanggalSelesai
+      // Kirim notifikasi status otomatis hanya jika status berubah
+      if (statusChanged) {
+        try {
+          const notifyPayload = {
+            statusOverride: payload.status,
+            rtlOverride: payload.rtl,
+            tanggalSelesaiOverride: payload.tanggalSelesai
+          }
+          const nres = await fetch(`/api/pengaduan/${selected.id}/notify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(notifyPayload) })
+          if (!nres.ok) {
+            toast({ title: 'Tersimpan (WA gagal)', description: 'Perubahan disimpan tapi notifikasi tidak terkirim', variant: 'destructive' })
+            setNotifFailed(true)
+            setNotifSent(false)
+          } else {
+            toast({ title: 'Berhasil', description: 'Perubahan & notifikasi terkirim' })
+            setNotifSent(true)
+            setNotifFailed(false)
+          }
+        } catch {
+          toast({ title: 'Tersimpan (WA gagal)', description: 'Perubahan disimpan tapi notifikasi gagal', variant: 'destructive' })
+          setNotifFailed(true)
+          setNotifSent(false)
         }
-        const nres = await fetch(`/api/pengaduan/${selected.id}/notify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(notifyPayload) })
-        if (!nres.ok) {
-          toast({ title: 'Tersimpan (WA gagal)', description: 'Perubahan disimpan tapi notifikasi tidak terkirim', variant: 'destructive' })
-        } else {
-          toast({ title: 'Berhasil', description: 'Perubahan & notifikasi terkirim' })
-        }
-      } catch {
-        toast({ title: 'Tersimpan (WA gagal)', description: 'Perubahan disimpan tapi notifikasi gagal', variant: 'destructive' })
+      } else {
+        toast({ title: 'Berhasil', description: 'Perubahan disimpan' })
+        setNotifSent(false)
+        setNotifFailed(false)
       }
-      setOpen(false)
+      // Update original baseline & auto hide indicators
+      setOriginal({ ...selected })
+      if (statusChanged) setTimeout(() => { setNotifSent(false); setNotifFailed(false) }, 6000)
     } catch (e) {
       toast({ title: 'Gagal', description: 'Tidak dapat menyimpan perubahan', variant: 'destructive' })
     } finally {
@@ -250,7 +274,7 @@ export default function PengaduanPage() {
                     <TableCell className="text-blue-100/90">{c.klasifikasi}</TableCell>
                     <TableCell>{badge(c.status)}</TableCell>
                     <TableCell className="flex gap-2 justify-center">
-                      <Button size="icon" variant="soft" className="w-8 h-8" onClick={() => { setSelected({ ...c }); setOriginal({ ...c }); setOpen(true) }}>
+                      <Button size="icon" variant="soft" className="w-8 h-8" onClick={() => { setSelected({ ...c }); setOriginal({ ...c }); setNotifSent(false); setNotifFailed(false); setOpen(true) }}>
                         <Edit className="w-4 h-4" />
                       </Button>
                       <AlertDialog open={confirmDeleteId===c.id} onOpenChange={(o)=> setConfirmDeleteId(o? c.id : null)}>
@@ -333,8 +357,18 @@ export default function PengaduanPage() {
                     <Input id="selesai" type="date" value={selected.tanggalSelesai} onChange={e => setSelected((p: any) => ({ ...p, tanggalSelesai: e.target.value }))} className="mt-1 bg-blue-950/40 border-blue-800/40 text-blue-50 placeholder:text-blue-300/40" />
                   </div>
                 </div>
-                <div className="flex gap-3 pt-2">
-                  <Button onClick={save} className="bg-blue-600 hover:bg-blue-500" disabled={!hasChanges || saving}>{saving ? 'Menyimpan...' : 'Simpan'}</Button>
+                <div className="flex flex-col gap-2 pt-2">
+                  <div className="flex gap-3">
+                    <Button onClick={save} className="bg-blue-600 hover:bg-blue-500" disabled={!hasChanges || saving}>{saving ? 'Menyimpan...' : 'Simpan'}</Button>
+                  </div>
+                  {notifSent && (
+                    <div className="flex items-center text-emerald-400 text-xs gap-1 animate-in fade-in">
+                      <Check className="w-3 h-3" /> Notifikasi WA terkirim
+                    </div>
+                  )}
+                  {notifFailed && (
+                    <div className="text-red-400 text-xs animate-in fade-in">Notifikasi WA gagal dikirim</div>
+                  )}
                 </div>
               </section>
             </div>
