@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { sendWhatsAppMessage, isFonnteSuccess } from '@/lib/fonnte'
+import { sendWhatsAppMessage, isFonnteSuccess, normalizePhone } from '@/lib/fonnte'
 import { humanizeClassification, humanizeStatus } from '@/lib/humanize'
+import { apiError } from '@/lib/api-response'
 
 // ------------------ Rate Limiting & Anti-Spam ------------------
 // In-memory store (will reset on redeploy / server restart). Cukup sebagai lapisan proteksi dasar.
@@ -114,7 +115,7 @@ function checkAndRecordLimits(ip: string, email: string, description: string): {
 const complaintSchema = z.object({
   namaLengkap: z.string().min(3).max(150),
   email: z.string().email().max(190).transform(v => v.toLowerCase()),
-  nomorTelepon: z.string().regex(/^(\+62|08)\d{7,13}$/), // +62 / 08 kemudian 7-13 digit lagi
+  nomorTelepon: z.string().regex(/^(\+62|0?8)\d{7,13}$/), // izinkan +62 / 08 / 8
   klasifikasi: z.enum([
     'PERSYARATAN_LAYANAN',
     'PROSEDUR_LAYANAN',
@@ -125,10 +126,18 @@ const complaintSchema = z.object({
     'PERILAKU_PETUGAS_PELAYANAN',
     'SARANA_DAN_PRASARANA'
   ] as const),
-  deskripsi: z.string().max(1500), // no min per user request
-  // honeypot
+  deskripsi: z.string().max(1500),
   hp_field: z.string().optional().default('')
 })
+
+function sanitizeDescription(raw: string): string {
+  let s = raw.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // control chars kecuali \t\n biasa tidak ada di teks user
+  s = s.replace(/<[^>]+>/g, '') // strip tag html sederhana
+  s = s.replace(/\r/g, '')
+  s = s.replace(/\n{3,}/g, '\n\n') // batasi newline beruntun
+  s = s.trim()
+  return s
+}
 
 function generateComplaintCode(): string {
   // Format: PGD + yymmdd + random 3 chars
@@ -152,18 +161,26 @@ export async function POST(req: Request) {
     const json = await req.json()
     const parsed = complaintSchema.safeParse(json)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })
+      return apiError({ code: 'VALIDATION_ERROR', message: 'Input tidak valid', details: parsed.error.flatten(), status: 400 })
     }
     const { hp_field, ...data } = parsed.data
     if (hp_field) {
-      // honeypot triggered
-      return NextResponse.json({ error: 'INVALID_REQUEST' }, { status: 400 })
+      return apiError({ code: 'INVALID_REQUEST', message: 'Permintaan tidak valid' })
+    }
+    // Normalisasi & sanitasi sebelum rate limit (agar konsisten deteksi duplikat)
+    const cleanedDescription = sanitizeDescription(data.deskripsi)
+    if (!cleanedDescription) {
+      return apiError({ code: 'EMPTY_DESCRIPTION', message: 'Deskripsi tidak boleh kosong setelah sanitasi' })
+    }
+    const phoneNormalized = normalizePhone(data.nomorTelepon)
+    if (!phoneNormalized) {
+      return apiError({ code: 'INVALID_PHONE', message: 'Nomor telepon tidak valid' })
     }
     // Rate limiting & Anti-Spam
     const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown'
-    const rl = checkAndRecordLimits(ip, data.email, data.deskripsi)
+    const rl = checkAndRecordLimits(ip, data.email, cleanedDescription)
     if (!rl.ok) {
-      return NextResponse.json({ error: rl.code, message: rl.message }, { status: 429 })
+      return apiError({ code: rl.code || 'RATE_LIMIT', message: rl.message || 'Terlalu banyak permintaan', status: 429 })
     }
     const code = await createUniqueCode()
     const complaint = await prisma.complaint.create({
@@ -171,9 +188,9 @@ export async function POST(req: Request) {
         code,
         reporterName: data.namaLengkap,
         email: data.email,
-        phone: data.nomorTelepon,
+        phone: phoneNormalized,
         classification: data.klasifikasi as any,
-        description: data.deskripsi
+        description: cleanedDescription
       },
       select: { id: true, code: true, createdAt: true }
     })
@@ -185,7 +202,7 @@ export async function POST(req: Request) {
         if (process.env.FONNTE_TOKEN) {
           const baseUrl = process.env.APP_BASE_URL || ''
           const humanClassification = humanizeClassification(data.klasifikasi as any)
-          const descClean = data.deskripsi.replace(/\s+/g,' ').trim()
+          const descClean = cleanedDescription.replace(/\s+/g,' ').trim()
           const descSnippet = descClean.length > 200 ? descClean.slice(0,197) + '...' : descClean
           const trackLink = baseUrl ? `${baseUrl}/status?ref=${complaint.code}` : ''
           const footer = process.env.WA_MESSAGE_FOOTER || 'Jangan balas pesan ini. Simpan kode untuk pelacakan.'
@@ -222,10 +239,10 @@ export async function POST(req: Request) {
         console.error('Gagal kirim WhatsApp notifikasi', e)
       }
     })()
-    return NextResponse.json({ data: complaint })
+  return NextResponse.json({ data: complaint })
   } catch (e: any) {
     console.error('POST /api/pengaduan error', e)
-    return NextResponse.json({ error: 'SERVER_ERROR' }, { status: 500 })
+    return apiError({ code: 'SERVER_ERROR', message: 'Terjadi kesalahan server', status: 500 })
   }
 }
 
@@ -292,7 +309,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ data, page, limit, total })
   } catch (e) {
     console.error('GET /api/pengaduan error', e)
-    return NextResponse.json({ error: 'SERVER_ERROR' }, { status: 500 })
+    return apiError({ code: 'SERVER_ERROR', message: 'Terjadi kesalahan server', status: 500 })
   }
 }
 
