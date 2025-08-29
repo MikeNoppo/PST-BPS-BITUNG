@@ -39,8 +39,10 @@ export default function AdminDashboard() {
         const year = new Date().getFullYear()
         const res = await fetch(`/api/pengaduan/stats?year=${year}`, { signal: controller.signal })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const json = await res.json()
-        setStats(json)
+  const json = await res.json()
+  // API mengembalikan { data: {...} }, fallback ke json langsung jika tidak dibungkus
+  const data = json?.data ?? json
+  setStats(data)
       } catch (e: any) {
         if (e.name !== 'AbortError') setErrorStats(e.message || 'Gagal memuat statistik')
       } finally {
@@ -59,8 +61,9 @@ export default function AdminDashboard() {
         const year = new Date().getFullYear()
         const res = await fetch(`/api/pengaduan/aggregate?year=${year}`, { signal: controller.signal })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const json = await res.json()
-        setAggregate(json)
+  const json = await res.json()
+  const data = json?.data ?? json
+  setAggregate(data)
       } catch (e: any) {
         if (e.name !== 'AbortError') setErrorAgg(e.message || 'Gagal memuat agregasi')
       } finally {
