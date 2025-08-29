@@ -32,9 +32,10 @@ interface Props {
   initialTotal: number
   initialPage: number
   pageSize: number
+  ssrPagination?: boolean
 }
 
-export default function AdminComplaintsClient({ initialItems, initialTotal, initialPage, pageSize }: Props) {
+export default function AdminComplaintsClient({ initialItems, initialTotal, initialPage, pageSize, ssrPagination }: Props) {
   const [items, setItems] = useState<ComplaintRow[]>(initialItems)
   const [page, setPage] = useState(initialPage)
   const [total, setTotal] = useState(initialTotal)
@@ -53,6 +54,11 @@ export default function AdminComplaintsClient({ initialItems, initialTotal, init
   const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null)
 
   async function fetchPage(p: number) {
+    if (ssrPagination) {
+      // Navigasi SSR (biarkan server mem-fetch)
+      window.location.search = `?page=${p}`
+      return
+    }
     setLoading(true)
     try {
       const res = await fetch(`/api/pengaduan?admin=1&limit=${limit}&page=${p}`)
@@ -285,9 +291,9 @@ export default function AdminComplaintsClient({ initialItems, initialTotal, init
         </CardContent>
       </Card>
       <div className="flex items-center gap-4">
-        <Button size="sm" variant="outline" disabled={page===1} onClick={()=>fetchPage(page-1)}>Prev</Button>
+  <Button size="sm" variant="outline" disabled={page===1} onClick={()=>fetchPage(page-1)}>Prev</Button>
         <span className="text-xs text-blue-200">Hal {page} / {Math.max(1, Math.ceil(total/limit))}</span>
-        <Button size="sm" variant="outline" disabled={page*limit>=total} onClick={()=>fetchPage(page+1)}>Next</Button>
+  <Button size="sm" variant="outline" disabled={page*limit>=total} onClick={()=>fetchPage(page+1)}>Next</Button>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>

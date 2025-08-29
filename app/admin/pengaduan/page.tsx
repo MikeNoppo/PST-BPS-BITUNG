@@ -5,14 +5,18 @@ import AdminComplaintsClient, { type ComplaintRow } from '@/components/admin/adm
 // SSR + streaming friendly (can be cached/tagged later)
 export const dynamic = 'force-dynamic'
 
-export default async function PengaduanPage() {
+interface PageProps { searchParams?: { page?: string } }
+
+export default async function PengaduanPage({ searchParams }: PageProps) {
   const limit = 8
-  const page = 1
+  const pageParam = searchParams?.page || '1'
+  const page = Math.max(parseInt(pageParam, 10) || 1, 1)
+  const skip = (page - 1) * limit
   const [total, complaints] = await Promise.all([
     prisma.complaint.count(),
     prisma.complaint.findMany({
       orderBy: { createdAt: 'desc' },
-      skip: 0,
+      skip,
       take: limit,
       select: {
         code: true,
@@ -42,5 +46,5 @@ export default async function PengaduanPage() {
     tanggalSelesai: c.completedAt ? c.completedAt.toISOString().slice(0,10) : ''
   }))
 
-  return <AdminComplaintsClient initialItems={initial} initialTotal={total} initialPage={page} pageSize={limit} />
+  return <AdminComplaintsClient initialItems={initial} initialTotal={total} initialPage={page} pageSize={limit} ssrPagination />
 }
