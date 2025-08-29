@@ -196,6 +196,7 @@ export async function POST(req: Request) {
     })
   // Invalidate public complaints list cache (ISR tag)
   try { revalidateTag('complaints-public') } catch {}
+  try { revalidateTag('dashboard-data') } catch {}
     // Send WhatsApp notification (best effort, non-blocking)
     ;(async () => {
       try {
