@@ -5,25 +5,33 @@ import Navigation from '@/components/navigation'
 import { Footer } from '@/components/footer'
 import { ComplaintsTable, type ComplaintPublic } from '@/components/home/complaints-table'
 import { TextReveal } from '@/components/ui/text-reveal'
-import { getBaseUrl } from '@/lib/utils'
+import { prisma } from '@/lib/prisma'
+import { humanizeClassification, humanizeStatus } from '@/lib/humanize'
+import { unstable_cache } from 'next/cache'
 export const revalidate = 60 // seconds
 
-
-
-async function getLatestComplaints(limit = 5): Promise<ComplaintPublic[]> {
-  const base = getBaseUrl()
+// Best practice: hindari self-fetch internal HTTP untuk data sederhana.
+// Gunakan query langsung Prisma + unstable_cache dengan tag yang sama agar
+// revalidateTag('complaints-public') dari POST tetap bekerja.
+const getLatestComplaints = unstable_cache(async (limit: number): Promise<ComplaintPublic[]> => {
   try {
-    const res = await fetch(`${base}/api/pengaduan?limit=${limit}`,
-      { next: { revalidate: 60, tags: ['complaints-public'] } })
-    if (!res.ok) return []
-    const json = await res.json()
-    return json.data as ComplaintPublic[]
+    const rows = await prisma.complaint.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: { code: true, createdAt: true, classification: true, status: true }
+    })
+    return rows.map(r => ({
+      id: r.code,
+      tanggal: r.createdAt.toISOString(),
+      klasifikasi: humanizeClassification(r.classification),
+      status: humanizeStatus(r.status)
+    }))
   } catch (e) {
-    // Swallow network errors so landing page still renders
-    console.error('getLatestComplaints error', e)
+    console.error('getLatestComplaints DB error', e)
     return []
   }
-}
+  // tag & revalidate diatur di options unstable_cache di bawah
+}, ['latest-complaints'], { revalidate: 60, tags: ['complaints-public'] })
 
 export default async function Homepage() {
   const complaints = await getLatestComplaints(5)
