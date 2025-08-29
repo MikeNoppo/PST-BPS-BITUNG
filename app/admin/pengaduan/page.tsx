@@ -5,11 +5,12 @@ import AdminComplaintsClient, { type ComplaintRow } from '@/components/admin/adm
 // SSR + streaming friendly (can be cached/tagged later)
 export const dynamic = 'force-dynamic'
 
-interface PageProps { searchParams?: { page?: string } }
+interface PageProps { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }
 
 export default async function PengaduanPage({ searchParams }: PageProps) {
   const limit = 8
-  const pageParam = searchParams?.page || '1'
+  const params = await searchParams
+  const pageParam = (typeof params.page === 'string' ? params.page : Array.isArray(params.page) ? params.page[0] : undefined) || '1'
   const page = Math.max(parseInt(pageParam, 10) || 1, 1)
   const skip = (page - 1) * limit
   const [total, complaints] = await Promise.all([
