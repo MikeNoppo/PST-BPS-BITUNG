@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Printer } from 'lucide-react'
 import { ExportDropdown, MONTHS, exportToCSV, exportToExcel } from '@/components/export-utils'
+import { toast } from '@/hooks/use-toast'
 
 export type Complaint = {
   id: string
@@ -41,6 +42,7 @@ export default function AdminReportsClient({ years, initialYear, initialMonth, i
   const [reportType, setReportType] = useState<'monthly' | 'annual'>(initialReportType)
   const [exporting, setExporting] = useState(false)
   const [userChangedMonth, setUserChangedMonth] = useState(false)
+  const [exportingSheets, setExportingSheets] = useState(false)
 
   // Auto adjust month if no data for selected month (only on first render per SSR load)
   useEffect(() => {
@@ -154,32 +156,23 @@ export default function AdminReportsClient({ years, initialYear, initialMonth, i
     return { order, rows: counters }
   }
 
-  const exportAnnualSheets = () => {
-    const { order, rows } = buildAnnualSummaryMatrix()
-    const header = ['No.', 'Bulan', ...order.map((_,i)=> (i+1).toString()), 'Dalam Proses', 'Selesai']
-    const monthLabels = MONTHS.map(m=>m.label)
-    const body = rows.map((r,i)=> [
-      i+1,
-      monthLabels[i],
-      ...r.counts,
-      r.proses || '0',
-      r.selesai ? r.selesai : 'NIHIL'
-    ])
-    const footerLines = order.map((o,i)=> `${i+1}. ${o[0] + o.slice(1).toLowerCase()}`)
-    const csvLines = [header, ...body]
-    csvLines.push([])
-    footerLines.forEach(l => csvLines.push([`*) ${l}`]))
-    const csvContent = csvLines.map(line => line.map(f => {
-      const s = String(f)
-      return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s
-    }).join(',')).join('\n')
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `laporan-tahunan-ringkas-${year}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const exportAnnualSheets = async () => {
+    if (!year) return
+    setExportingSheets(true)
+    try {
+      const res = await fetch('/api/export/sheets/annual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year })
+      })
+      if (!res.ok) throw new Error('Gagal export Sheets')
+      const json = await res.json()
+      toast({ title: 'Export berhasil', description: `Tab: ${json.sheet?.tab || ''}` })
+      if (json.sheet?.url) window.open(json.sheet.url, '_blank')
+    } catch (e: any) {
+      console.error(e)
+      toast({ title: 'Export gagal', description: e.message || 'Terjadi kesalahan' })
+    } finally { setExportingSheets(false) }
   }
 
   const getStatusBadge = (status: string) => {
@@ -247,7 +240,7 @@ export default function AdminReportsClient({ years, initialYear, initialMonth, i
               <ExportDropdown
                 onCSV={() => handleExport('csv')}
                 onExcel={() => handleExport('excel')}
-                disabled={!year || exporting}
+                disabled={!year || exporting || exportingSheets}
                 count={reportType === 'monthly' ? monthlyData.length : annualData.length}
                 onSheets={reportType === 'annual' ? exportAnnualSheets : undefined}
               />
