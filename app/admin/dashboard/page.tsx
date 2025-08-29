@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { HighlightedBarChart } from '@/components/ui/highlighted-bar-chart'
 import { PieChart, Pie, LabelList, Cell } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
-import { Badge } from '@/components/ui/badge'
+// import { Badge } from '@/components/ui/badge' // (tidak terpakai saat ini)
 
 interface AggregateData {
   year: number
@@ -77,8 +77,9 @@ export default function AdminDashboard() {
   const selesai = stats?.selesai ?? 0
 
   const klasifikasiChart = useMemo(() => {
-    if (!aggregate) return [] as { klasifikasi: string; jumlah: number }[]
-    return aggregate.classification.map(c => ({ klasifikasi: c.label, jumlah: c.count }))
+    const list = aggregate?.classification
+    if (!Array.isArray(list)) return [] as { klasifikasi: string; jumlah: number }[]
+    return list.map(c => ({ klasifikasi: c.label, jumlah: c.count }))
   }, [aggregate])
 
   // Palet warna disesuaikan agar kontras & harmonis dengan background biru gelap.
@@ -104,16 +105,16 @@ export default function AdminDashboard() {
 
   // Monthly complaints (dummy aggregation based on DATA dates; in real app fetch aggregated counts)
   const monthlyChart = useMemo(() => {
-    if (!aggregate) return [] as { month: number; label: string; count: number }[]
-    return aggregate.monthly.map(m => ({
+    const list = aggregate?.monthly
+    if (!Array.isArray(list)) return [] as { month: number; label: string; count: number }[]
+    return list.map(m => ({
       month: m.month,
       label: new Date(2000, m.month - 1, 1).toLocaleString('id-ID', { month: 'short' }),
       count: m.count
     }))
   }, [aggregate])
 
-  const [activeKlas, setActiveKlas] = useState<number | null>(null)
-  const activeKlasData = activeKlas === null ? null : klasifikasiChart[activeKlas]
+  // (state interaksi klasifikasi belum digunakan; dihapus untuk mencegah warning)
 
   return (
     <div className="space-y-6">
