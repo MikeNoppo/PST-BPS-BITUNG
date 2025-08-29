@@ -1,380 +1,46 @@
-'use client'
+import { prisma } from '@/lib/prisma'
+import { humanizeClassification, humanizeStatus } from '@/lib/humanize'
+import AdminComplaintsClient, { type ComplaintRow } from '@/components/admin/admin-complaints-client'
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Edit, Search, Trash2, Check } from 'lucide-react'
-import { toast } from '@/hooks/use-toast'
-import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog'
-import { exportToCSV, exportToExcel, formatDateForExport, ExportDropdown } from '@/components/export-utils'
+// SSR + streaming friendly (can be cached/tagged later)
+export const dynamic = 'force-dynamic'
 
-type ComplaintRow = {
-  id: string
-  tanggal: string
-  nama: string
-  email: string
-  noWA: string
-  klasifikasi: string
-  status: string
-  deskripsi: string
-  rtl: string
-  tanggalSelesai: string
-}
-
-export default function PengaduanPage() {
-  useSession()
-  const [items, setItems] = useState<ComplaintRow[]>([])
-  const [page, setPage] = useState(1)
-  const [total, setTotal] = useState(0)
+export default async function PengaduanPage() {
   const limit = 8
-  const [loading, setLoading] = useState(false)
-  // Fetch complaints from API
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      setLoading(true)
-      try {
-        const res = await fetch(`/api/pengaduan?admin=1&limit=${limit}&page=${page}`)
-        const json = await res.json()
-        if (!cancelled && json?.data) {
-          setItems(json.data)
-          setTotal(json.total || json.data.length)
-        }
-      } catch (e) {
-        console.error('Load complaints failed', e)
-      } finally { if (!cancelled) setLoading(false) }
-    }
-    load()
-    return () => { cancelled = true }
-  }, [page])
-  const [selected, setSelected] = useState<any>(null)
-  const [original, setOriginal] = useState<any>(null)
-  const [open, setOpen] = useState(false)
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const [q, setQ] = useState('')
-  // Use undefined sentinel via empty string mapping for 'all'
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [klasifikasiFilter, setKlasifikasiFilter] = useState<string>('all')
-
-  const filtered = items.filter(c => {
-    const matchQ = q ? [c.id, c.nama, c.email].some(v => v.toLowerCase().includes(q.toLowerCase())) : true
-    const matchStatus = statusFilter === 'all' ? true : c.status === statusFilter
-    const matchKlas = klasifikasiFilter === 'all' ? true : c.klasifikasi === klasifikasiFilter
-    return matchQ && matchStatus && matchKlas
-  })
-
-  const headers = ['No', 'Nomor Pengaduan', 'Tanggal', 'Nama', 'Email', 'No WA', 'Klasifikasi', 'Deskripsi', 'Status', 'RTL', 'Tanggal Selesai']
-
-  const handleExportCSV = () => {
-    const date = new Date().toISOString().split('T')[0]
-    exportToCSV(filtered, headers, `pengaduan-${date}.csv`, (c, i) => [
-      i + 1,
-      c.id,
-      formatDateForExport(c.tanggal),
-      c.nama,
-      c.email,
-      c.noWA,
-      c.klasifikasi,
-      c.deskripsi,
-      c.status,
-      c.rtl,
-      formatDateForExport(c.tanggalSelesai)
-    ])
-  toast({ title: 'Export', description: 'Data diekspor (CSV)' })
-  }
-
-  const handleExportExcel = () => {
-    const date = new Date().toISOString().split('T')[0]
-    exportToExcel(filtered, headers, `pengaduan-${date}.xls`, (c, i) => [
-      i + 1,
-      c.id,
-      formatDateForExport(c.tanggal),
-      c.nama,
-      c.email,
-      c.noWA,
-      c.klasifikasi,
-      c.deskripsi,
-      c.status,
-      c.rtl,
-      formatDateForExport(c.tanggalSelesai)
-    ])
-  toast({ title: 'Export', description: 'Data diekspor (Excel)' })
-  }
-
-  // toast helper now provided globally
-
-  const [saving, setSaving] = useState(false)
-  const [notifSent, setNotifSent] = useState(false)
-  const [notifFailed, setNotifFailed] = useState(false)
-  const hasChanges = selected && original && (
-    selected.rtl !== original.rtl ||
-    selected.status !== original.status ||
-    (selected.tanggalSelesai || '') !== (original.tanggalSelesai || '')
-  )
-  const statusChanged = selected && original && selected.status !== original.status
-
-  // Debounce state
-  const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null)
-
-  const save = async () => {
-    if (!selected || !hasChanges || saving) return
-    // Debounce: block if called again within 1s
-    if (debounceTimeout) return
-    setSaving(true)
-    const timeout = setTimeout(() => setDebounceTimeout(null), 1000)
-    setDebounceTimeout(timeout)
-    try {
-      const payload = {
-        rtl: selected.rtl,
-        status: selected.status === 'Baru' ? 'BARU' : selected.status === 'Proses' ? 'PROSES' : selected.status === 'Selesai' ? 'SELESAI' : undefined,
-        tanggalSelesai: selected.tanggalSelesai || undefined
+  const page = 1
+  const [total, complaints] = await Promise.all([
+    prisma.complaint.count(),
+    prisma.complaint.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip: 0,
+      take: limit,
+      select: {
+        code: true,
+        createdAt: true,
+        classification: true,
+        status: true,
+        reporterName: true,
+        email: true,
+        phone: true,
+        description: true,
+        rtl: true,
+        completedAt: true,
       }
-      const res = await fetch(`/api/pengaduan/${selected.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-      if (!res.ok) throw new Error('Gagal menyimpan')
-      const json = await res.json()
-      setItems(prev => prev.map(p => p.id === selected.id ? { ...p, rtl: json.data.rtl, status: selected.status, tanggalSelesai: selected.tanggalSelesai } : p))
+    })
+  ])
 
-      // Kirim notifikasi status otomatis hanya jika status berubah
-      if (statusChanged) {
-        try {
-          const notifyPayload = {
-            statusOverride: payload.status,
-            rtlOverride: payload.rtl,
-            tanggalSelesaiOverride: payload.tanggalSelesai
-          }
-          const nres = await fetch(`/api/pengaduan/${selected.id}/notify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(notifyPayload) })
-          if (!nres.ok) {
-            toast({ title: 'Tersimpan (WA gagal)', description: 'Perubahan disimpan tapi notifikasi tidak terkirim', variant: 'destructive' })
-            setNotifFailed(true)
-            setNotifSent(false)
-          } else {
-            toast({ title: 'Berhasil', description: 'Perubahan & notifikasi terkirim' })
-            setNotifSent(true)
-            setNotifFailed(false)
-          }
-        } catch {
-          toast({ title: 'Tersimpan (WA gagal)', description: 'Perubahan disimpan tapi notifikasi gagal', variant: 'destructive' })
-          setNotifFailed(true)
-          setNotifSent(false)
-        }
-      } else {
-        toast({ title: 'Berhasil', description: 'Perubahan disimpan' })
-        setNotifSent(false)
-        setNotifFailed(false)
-      }
-      // Update original baseline & auto hide indicators
-      setOriginal({ ...selected })
-      if (statusChanged) setTimeout(() => { setNotifSent(false); setNotifFailed(false) }, 6000)
-    } catch (e) {
-      toast({ title: 'Gagal', description: 'Tidak dapat menyimpan perubahan', variant: 'destructive' })
-    } finally {
-      setSaving(false)
-    }
-  }
+  const initial: ComplaintRow[] = complaints.map(c => ({
+    id: c.code,
+    tanggal: c.createdAt.toISOString(),
+    nama: c.reporterName,
+    email: c.email,
+    noWA: c.phone,
+    klasifikasi: humanizeClassification(c.classification as any),
+    status: humanizeStatus(c.status as any),
+    deskripsi: c.description,
+    rtl: c.rtl || '',
+    tanggalSelesai: c.completedAt ? c.completedAt.toISOString().slice(0,10) : ''
+  }))
 
-  // Notifikasi manual dihapus; notifikasi dikirim otomatis setelah simpan jika ada perubahan.
-
-  const remove = async (id: string) => {
-    try {
-      const res = await fetch(`/api/pengaduan/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('fail')
-      setItems(prev => prev.filter(p => p.id !== id))
-  toast({ title: 'Dihapus', description: 'Pengaduan berhasil dihapus' })
-    } catch {
-  toast({ title: 'Gagal', description: 'Tidak dapat menghapus', variant: 'destructive' })
-    } finally {
-      setConfirmDeleteId(null)
-    }
-  }
-
-  const badge = (s: string) => {
-    const base = 'px-2 py-0.5 rounded text-xs font-medium border'
-    switch (s) {
-      case 'Baru': return <span className={`${base} bg-blue-800/40 border-blue-600/40 text-blue-100`}>Baru</span>
-      case 'Proses': return <span className={`${base} bg-amber-800/30 border-amber-500/40 text-amber-200`}>Proses</span>
-      case 'Selesai': return <span className={`${base} bg-emerald-800/30 border-emerald-600/40 text-emerald-200`}>Selesai</span>
-      default: return <span className={`${base} bg-blue-900/30 border-blue-700/40 text-blue-200`}>{s}</span>
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-  {/* Notifications dialihkan ke toast */}
-      <Card className="bg-blue-900/40 border-blue-700/40 backdrop-blur supports-[backdrop-filter]:bg-blue-900/30">
-        <CardHeader>
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-xl text-blue-100">Daftar Semua Pengaduan</CardTitle>
-            <ExportDropdown onCSV={handleExportCSV} onExcel={handleExportExcel} />
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-2 top-2.5 text-blue-300/60" />
-              <Input placeholder="Cari ID / Nama / Email" className="pl-8 bg-blue-950/40 border-blue-700/40 placeholder:text-blue-300/40 text-blue-50" value={q} onChange={e => setQ(e.target.value)} />
-            </div>
-            <Select value={statusFilter} onValueChange={v => setStatusFilter(v)}>
-              <SelectTrigger className="bg-blue-950/40 border-blue-700/40 text-blue-50"><SelectValue placeholder="Filter Status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
-                <SelectItem value="Baru">Baru</SelectItem>
-                <SelectItem value="Proses">Proses</SelectItem>
-                <SelectItem value="Selesai">Selesai</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={klasifikasiFilter} onValueChange={v => setKlasifikasiFilter(v)}>
-              <SelectTrigger className="bg-blue-950/40 border-blue-700/40 text-blue-50"><SelectValue placeholder="Filter Klasifikasi" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Klasifikasi</SelectItem>
-                {[...new Set(items.map(i => i.klasifikasi))].map(k => (
-                  <SelectItem value={k} key={k}>{k}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto rounded-md border border-blue-800/40">
-            <Table>
-              <TableHeader className="bg-blue-900/60 sticky top-0 z-10">
-                <TableRow>
-                  <TableHead className="text-blue-100">No.</TableHead>
-                  <TableHead className="text-blue-100">Tgl</TableHead>
-                  <TableHead className="text-blue-100">Nama</TableHead>
-                  <TableHead className="text-blue-100">Email</TableHead>
-                  <TableHead className="text-blue-100">No WA</TableHead>
-                  <TableHead className="text-blue-100">Klasifikasi</TableHead>
-                  <TableHead className="text-blue-100">Status</TableHead>
-                  <TableHead className="text-blue-100 text-center">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading && (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center text-blue-200">Memuat...</TableCell>
-                  </TableRow>
-                )}
-                {!loading && filtered.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center text-blue-200">Tidak ada data</TableCell>
-                  </TableRow>
-                )}
-                {filtered.map((c, i) => (
-                  <TableRow key={c.id} className={i % 2 ? 'bg-blue-900/30' : 'bg-blue-900/10'}>
-                    <TableCell className="text-blue-50">{(page - 1) * limit + i + 1}</TableCell>
-                    <TableCell className="text-blue-50">{formatDateForExport(c.tanggal)}</TableCell>
-                    <TableCell className="font-medium text-blue-50">{c.nama}</TableCell>
-                    <TableCell className="text-blue-100/90">{c.email}</TableCell>
-                    <TableCell className="text-blue-100/90">{c.noWA}</TableCell>
-                    <TableCell className="text-blue-100/90">{c.klasifikasi}</TableCell>
-                    <TableCell>{badge(c.status)}</TableCell>
-                    <TableCell className="flex gap-2 justify-center">
-                      <Button size="icon" variant="soft" className="w-8 h-8" onClick={() => { setSelected({ ...c }); setOriginal({ ...c }); setNotifSent(false); setNotifFailed(false); setOpen(true) }}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <AlertDialog open={confirmDeleteId===c.id} onOpenChange={(o)=> setConfirmDeleteId(o? c.id : null)}>
-                        <AlertDialogTrigger asChild>
-                          <Button size="icon" variant="outline" className="w-8 h-8 text-red-400 hover:text-red-300 hover:border-red-400/60">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="bg-blue-950/95 border-blue-700/60 text-blue-50">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="text-blue-100">Hapus Pengaduan?</AlertDialogTitle>
-                            <AlertDialogDescription className="text-blue-300/80">Data ini akan dihapus permanen. Lanjutkan?</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel className="bg-white text-blue-900 hover:bg-blue-50">Batal</AlertDialogCancel>
-                            <AlertDialogAction className="bg-red-600 hover:bg-red-500" onClick={()=>remove(c.id)}>Hapus</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-      <div className="flex items-center gap-4">
-        <Button size="sm" variant="outline" disabled={page===1} onClick={()=>setPage(p=>p-1)}>Prev</Button>
-        <span className="text-xs text-blue-200">Hal {page} / {Math.max(1, Math.ceil(total/limit))}</span>
-        <Button size="sm" variant="outline" disabled={page*limit>=total} onClick={()=>setPage(p=>p+1)}>Next</Button>
-      </div>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        {/* Adjusted dialog styling for better contrast (previously white background with very light text) */}
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-blue-950/90 border border-blue-800/60 backdrop-blur-md text-blue-50">
-          <DialogHeader>
-            <DialogTitle className="text-blue-50">Detail Pengaduan - {selected?.id}</DialogTitle>
-          </DialogHeader>
-          {selected && (
-            <div className="space-y-6">
-              <section>
-                <h4 className="text-sm font-semibold text-blue-200 mb-2">Informasi Pelapor</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><span className="block text-blue-300">Nama</span><span className="font-medium text-blue-50">{selected.nama}</span></div>
-                  <div><span className="block text-blue-300">Email</span><span className="text-blue-50">{selected.email}</span></div>
-                  <div><span className="block text-blue-300">No WA</span><span className="text-blue-50">{selected.noWA}</span></div>
-                  <div><span className="block text-blue-300">Tanggal</span><span className="text-blue-50">{formatDateForExport(selected.tanggal)}</span></div>
-                </div>
-              </section>
-              <section>
-                <h4 className="text-sm font-semibold text-blue-200 mb-2">Detail Pengaduan</h4>
-                <div className="space-y-2 text-sm">
-                  <div><span className="block text-blue-300">Klasifikasi</span><span className="text-blue-50">{selected.klasifikasi}</span></div>
-                  <div>
-                    <span className="block text-blue-300 mb-1">Deskripsi</span>
-                    <p className="bg-blue-900/40 border border-blue-800/40 p-3 rounded text-[13px] leading-relaxed whitespace-pre-wrap text-blue-50">{selected.deskripsi}</p>
-                  </div>
-                </div>
-              </section>
-              <section className="space-y-4">
-                <div>
-                  <Label htmlFor="rtl" className="text-blue-200">Rencana Tindak Lanjut (RTL)</Label>
-                  <Textarea id="rtl" rows={3} value={selected.rtl} onChange={e => setSelected((p: any) => ({ ...p, rtl: e.target.value }))} className="mt-1 bg-blue-950/40 border-blue-800/40 text-blue-50 placeholder:text-blue-300/40" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-blue-200">Status</Label>
-                    <Select value={selected.status} onValueChange={v => setSelected((p: any) => ({ ...p, status: v }))}>
-                      <SelectTrigger className="mt-1 bg-blue-950/40 border-blue-800/40 text-blue-50"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Baru">Baru</SelectItem>
-                        <SelectItem value="Proses">Proses</SelectItem>
-                        <SelectItem value="Selesai">Selesai</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="selesai" className="text-blue-200">Tanggal Selesai</Label>
-                    <Input id="selesai" type="date" value={selected.tanggalSelesai} onChange={e => setSelected((p: any) => ({ ...p, tanggalSelesai: e.target.value }))} className="mt-1 bg-blue-950/40 border-blue-800/40 text-blue-50 placeholder:text-blue-300/40" />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 pt-2">
-                  <div className="flex gap-3">
-                    <Button onClick={save} className="bg-blue-600 hover:bg-blue-500" disabled={!hasChanges || saving}>{saving ? 'Menyimpan...' : 'Simpan'}</Button>
-                  </div>
-                  {notifSent && (
-                    <div className="flex items-center text-emerald-400 text-xs gap-1 animate-in fade-in">
-                      <Check className="w-3 h-3" /> Notifikasi WA terkirim
-                    </div>
-                  )}
-                  {notifFailed && (
-                    <div className="text-red-400 text-xs animate-in fade-in">Notifikasi WA gagal dikirim</div>
-                  )}
-                </div>
-              </section>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
+  return <AdminComplaintsClient initialItems={initial} initialTotal={total} initialPage={page} pageSize={limit} />
 }
