@@ -33,45 +33,57 @@ export async function upsertAnnualSheet({
   const auth = getAuth()
   const sheets = google.sheets({ version: 'v4', auth })
   const tabTitle = `LAPORAN_${year}`
+  const TEMPLATE_TITLE = 'TEMPLATE_LAPORAN'
 
-  // Get spreadsheet metadata
+  // Get spreadsheet metadata (template + possible existing target)
   const meta = await sheets.spreadsheets.get({ spreadsheetId })
-  const sheet = meta.data.sheets?.find((s: any) => s.properties?.title === tabTitle)
-  let sheetId = sheet?.properties?.sheetId
-  if (!sheet) {
-    // create sheet
-    const addRes = await sheets.spreadsheets.batchUpdate({
+  const existing = meta.data.sheets?.find((s: any) => s.properties?.title === tabTitle)
+  let sheetId = existing?.properties?.sheetId as number | undefined
+
+  if (!existing) {
+    const templateSheet = meta.data.sheets?.find((s: any) => s.properties?.title === TEMPLATE_TITLE)
+    if (!templateSheet) {
+      throw new Error(`Template sheet '${TEMPLATE_TITLE}' tidak ditemukan`)
+    }
+    const duplicateRes = await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {
-        requests: [{ addSheet: { properties: { title: tabTitle } } }]
+        requests: [
+          {
+            duplicateSheet: {
+              sourceSheetId: templateSheet.properties?.sheetId,
+              newSheetName: tabTitle,
+            }
+          }
+        ]
       }
     })
-    sheetId = addRes.data.replies?.[0]?.addSheet?.properties?.sheetId
-  } else {
-    // clear existing content
-    await sheets.spreadsheets.values.clear({ spreadsheetId, range: `${tabTitle}!A:Z` })
+  const dupId = duplicateRes.data.replies?.[0]?.duplicateSheet?.properties?.sheetId
+  sheetId = (dupId ?? undefined) as number | undefined
   }
 
-  // Build values
-  const header = ['No.', 'Bulan', ...headerMeta.classificationNumbers, 'Dalam Proses', 'Selesai']
-  const values = [header]
-  rows.forEach(r => {
-    values.push([
-      String(r.no),
-      r.bulan,
-      ...r.counts.map(c => String(c || 0)),
-      String(r.proses || 0),
-      String(r.selesai || 0),
-    ])
-  })
-  values.push([])
-  classificationFootnotes.forEach(f => values.push([`*) ${f}`]))
+  // Build only the data region (classification + status) WITHOUT touching numbering & month labels (kept by template)
+  // Range: C7:L18 (12 rows, 8 klasifikasi + 2 status)
+  const dataValues: string[][] = rows.map(r => [
+    ...r.counts.map(c => String(c || 0)),
+    String(r.proses || 0),
+    String(r.selesai || 0),
+  ])
 
-  await sheets.spreadsheets.values.update({
+  // Footnotes start at A20 downward; prefix with '*) '
+  const footnoteStartRow = 20
+  const footnoteValues: string[][] = classificationFootnotes.map(f => [`*) ${f}`])
+
+  // Batch update values; we intentionally do NOT clear formatting/merged cells
+  await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId,
-    range: `${tabTitle}!A1`,
-    valueInputOption: 'RAW',
-    requestBody: { values }
+    requestBody: {
+      valueInputOption: 'RAW',
+      data: [
+        { range: `${tabTitle}!C7:L18`, values: dataValues },
+        { range: `${tabTitle}!A${footnoteStartRow}:A${footnoteStartRow + footnoteValues.length - 1}`, values: footnoteValues },
+      ]
+    }
   })
 
   return { tabTitle, sheetId }

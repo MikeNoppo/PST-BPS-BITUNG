@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     }))
 
     complaints.forEach(c => {
-      const m = c.createdAt.getMonth()
+      const m = c.createdAt.getUTCMonth()
       const idx = rows[m]
       const klasHuman = humanizeClassification(c.classification as any).toUpperCase()
       const pos = order.findIndex(o => klasHuman.includes(o.split(' / ')[0]))
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 
     const classificationFootnotes = order.map((o,i)=> `${i+1}. ${o[0] + o.slice(1).toLowerCase()}`)
 
-    const { tabTitle } = await upsertAnnualSheet({
+  const { tabTitle, sheetId } = await upsertAnnualSheet({
       year,
       spreadsheetId,
       headerMeta: { classificationNumbers: order.map((_,i)=> String(i+1)) },
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
       classificationFootnotes,
     })
 
-    const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=0`
+  const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=${sheetId ?? 0}`
 
     return NextResponse.json({ success: true, sheet: { tab: tabTitle, url } })
   } catch (e: any) {

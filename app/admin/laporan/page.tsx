@@ -19,11 +19,14 @@ type Complaint = {
 export const dynamic = 'force-dynamic'
 
 export default async function AdminLaporan({
-  searchParams
+  searchParams,
 }: {
-  searchParams?: { [key: string]: string | string[] | undefined }
+  // In Next.js newer versions searchParams may be a Promise that must be awaited
+  searchParams?: any
 }) {
-  const params = searchParams || {}
+  // Support both sync object and Promise form
+  const resolved = searchParams && typeof searchParams.then === 'function' ? await searchParams : (searchParams || {})
+  const params: { [key: string]: string | string[] | undefined } = resolved
 
   // Distinct years desc
   const yearsRows = await prisma.$queryRaw<{ year: number }[]>`SELECT DISTINCT EXTRACT(YEAR FROM "createdAt")::int AS year FROM "Complaint" ORDER BY year DESC`
