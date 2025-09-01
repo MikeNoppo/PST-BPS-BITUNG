@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     if (!/^\d{4}$/.test(year)) {
       return apiError({ code: 'INVALID_YEAR', message: 'Tahun tidak valid', status: 400 })
     }
-    const spreadsheetEnv = process.env.GOOGLE_SHEETS_SPREADSHEET_ID || ''
+    const spreadsheetEnv = process.env.GOOGLE_SHEETS_YEARLY_SPREADSHEET_ID || ''
     if (!spreadsheetEnv) {
       return apiError({ code: 'NO_SPREADSHEET', message: 'Spreadsheet ID belum diset', status: 500 })
     }
