@@ -175,6 +175,25 @@ export default function AdminReportsClient({ years, initialYear, initialMonth, i
     } finally { setExportingSheets(false) }
   }
 
+  const exportMonthlySheets = async () => {
+    if (!year || !month) return
+    setExportingSheets(true)
+    try {
+      const res = await fetch('/api/export/sheets/monthly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year, month })
+      })
+      if (!res.ok) throw new Error('Gagal export Sheets bulanan')
+      const json = await res.json()
+      toast({ title: 'Export bulanan berhasil', description: `Tab: ${json.sheet?.tab || ''}` })
+      if (json.sheet?.url) window.open(json.sheet.url, '_blank')
+    } catch (e: any) {
+      console.error(e)
+      toast({ title: 'Export gagal', description: e.message || 'Terjadi kesalahan' })
+    } finally { setExportingSheets(false) }
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Baru':
@@ -242,7 +261,7 @@ export default function AdminReportsClient({ years, initialYear, initialMonth, i
                 onExcel={() => handleExport('excel')}
                 disabled={!year || exporting || exportingSheets}
                 count={reportType === 'monthly' ? monthlyData.length : annualData.length}
-                onSheets={reportType === 'annual' ? exportAnnualSheets : undefined}
+                onSheets={reportType === 'annual' ? exportAnnualSheets : reportType === 'monthly' ? exportMonthlySheets : undefined}
               />
             </div>
           </div>
