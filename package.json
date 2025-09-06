@@ -11,7 +11,8 @@
     "postinstall": "prisma generate --no-engine",
     "prisma:generate": "prisma generate --no-engine",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:seed-complaints": "tsx prisma/seed-complaints.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
