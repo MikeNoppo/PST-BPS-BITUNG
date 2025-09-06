@@ -2,6 +2,8 @@ import { google } from 'googleapis'
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 const TEMPLATE_TITLE = 'TEMPLATE_LAPORAN'
+// Chairperson name for signature block; adjust when leadership changes
+export const CHAIRPERSON_NAME = 'Ahmad Handoko Lipoeto, SE'
 // Month names (Indonesian)
 const MONTH_NAMES = [
   'Januari',
@@ -135,35 +137,49 @@ export async function upsertAnnualSheet({
   await sheets.spreadsheets.values.clear({ spreadsheetId, range: `${tabTitle}!A${footnoteStartRow}:A200` })
   await sheets.spreadsheets.values.clear({ spreadsheetId, range: `${tabTitle}!Q${footnoteStartRow}:S200` })
 
-  // Prepare signature lines if provided, placed in Q:R:S below footnotes with one blank row gap
-  const signatureStartRow = footnoteStartRow + footnoteValues.length + (signatureLines?.length ? 1 : 0)
-  const signatureValues: string[][] = (signatureLines || []).map(line => [line, '', ''])
+  // Prepare signature block if provided: merge Q..S rows just below footnotes with one blank row gap
+  const signatureBlockStartRow = footnoteStartRow + 1
+  const signatureBlockEndRow = signatureBlockStartRow + 6 // total 7 rows (e.g., Q21:S27)
+  const signatureContent = (signatureLines && signatureLines.length)
+    ? [[signatureLines.join('\n')]]
+    : []
 
   // Batch update values; we intentionally do NOT clear formatting/merged cells beyond the clears above
   const annualDataPayload: { range: string; values: string[][] }[] = [
     { range: `${tabTitle}!C7:L18`, values: dataValues },
     { range: `${tabTitle}!A${footnoteStartRow}:A${footnoteStartRow + footnoteValues.length - 1}`, values: footnoteValues },
   ]
-  if (signatureValues.length) {
-    annualDataPayload.push({ range: `${tabTitle}!Q${signatureStartRow}:S${signatureStartRow + signatureValues.length - 1}`, values: signatureValues })
+  if (signatureContent.length) {
+    annualDataPayload.push({ range: `${tabTitle}!Q${signatureBlockStartRow}:Q${signatureBlockStartRow}`, values: signatureContent })
   }
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId,
     requestBody: { valueInputOption: 'RAW', data: annualDataPayload },
   })
 
-  // Optional: format signature rows (center/middle align and wrap)
-  if (sheetId !== undefined && signatureValues.length) {
-    const startRowIndex = signatureStartRow - 1
-    const endRowIndex = startRowIndex + signatureValues.length
+  // Optional: format signature block - unmerge (if any), merge target area Q..S, align center and wrap
+  if (sheetId !== undefined && signatureContent.length) {
+    const startRowIndex = signatureBlockStartRow - 1
+    const endRowIndex = signatureBlockEndRow // exclusive
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {
         requests: [
           {
+            unmergeCells: {
+              range: { sheetId, startRowIndex, endRowIndex, startColumnIndex: 16, endColumnIndex: 19 },
+            },
+          },
+          {
+            mergeCells: {
+              range: { sheetId, startRowIndex, endRowIndex, startColumnIndex: 16, endColumnIndex: 19 },
+              mergeType: 'MERGE_ALL',
+            },
+          },
+          {
             repeatCell: {
-              range: { sheetId, startRowIndex, endRowIndex, startColumnIndex: 16, endColumnIndex: 19 }, // Q..S
-              cell: { userEnteredFormat: { horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE', wrapStrategy: 'WRAP' } },
+              range: { sheetId, startRowIndex, endRowIndex, startColumnIndex: 16, endColumnIndex: 19 },
+              cell: { userEnteredFormat: { horizontalAlignment: 'CENTER', verticalAlignment: 'TOP', wrapStrategy: 'WRAP' } },
               fields: 'userEnteredFormat.horizontalAlignment,userEnteredFormat.verticalAlignment,userEnteredFormat.wrapStrategy',
             },
           },
@@ -233,9 +249,12 @@ export async function upsertMonthlySheet({
   const footnoteStart = (dataStartRow + values.length) + 1
   const footnoteValues: string[][] = classificationFootnotes.map(f => [`*) ${f}`])
 
-  // Signature placement: below footnotes with one blank row gap, in columns Q:R:S
-  const signatureStart = footnoteStart + footnoteValues.length + (signatureLines?.length ? 1 : 0)
-  const signatureValues: string[][] = (signatureLines || []).map(line => [line, '', ''])
+  // Signature placement: merged block in Q..S just below footnotes area (starting one row after footnotes begin)
+  const signatureBlockStartRow = footnoteStart + 1
+  const signatureBlockEndRow = signatureBlockStartRow + 6 // total 7 rows to accommodate spacing
+  const signatureContent = (signatureLines && signatureLines.length)
+    ? [[signatureLines.join('\n')]]
+    : []
 
   // Batch update: data + footnotes
   // minimal shape similar to ValueRange
@@ -247,9 +266,9 @@ export async function upsertMonthlySheet({
   if (footnoteValues.length) {
     batchData.push({ range: `${tabTitle}!A${footnoteStart}:A${footnoteStart + footnoteValues.length - 1}`, values: footnoteValues })
   }
-  // Signature in Q:R:S
-  if (signatureValues.length) {
-    batchData.push({ range: `${tabTitle}!Q${signatureStart}:S${signatureStart + signatureValues.length - 1}`, values: signatureValues })
+  // Signature block text goes into Q cell (merged later)
+  if (signatureContent.length) {
+    batchData.push({ range: `${tabTitle}!Q${signatureBlockStartRow}:Q${signatureBlockStartRow}`, values: signatureContent })
   }
 
   if (batchData.length) {
@@ -312,21 +331,19 @@ export async function upsertMonthlySheet({
               fields: 'userEnteredFormat.horizontalAlignment,userEnteredFormat.verticalAlignment'
             }
           },
-          // Optional formatting for signature rows in Q..S (below data)
-          ...(signatureValues.length
-            ? [{
-                repeatCell: {
-                  range: {
-                    sheetId,
-                    startRowIndex: (signatureStart - 1),
-                    endRowIndex: (signatureStart - 1) + signatureValues.length,
-                    startColumnIndex: 16, // Q
-                    endColumnIndex: 19,   // S (exclusive)
-                  },
-                  cell: { userEnteredFormat: { horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE', wrapStrategy: 'WRAP' } },
-                  fields: 'userEnteredFormat.horizontalAlignment,userEnteredFormat.verticalAlignment,userEnteredFormat.wrapStrategy'
+          // Optional formatting for signature block in Q..S (below footnotes)
+          ...(signatureContent.length
+            ? [
+                { unmergeCells: { range: { sheetId, startRowIndex: (signatureBlockStartRow - 1), endRowIndex: signatureBlockEndRow, startColumnIndex: 16, endColumnIndex: 19 } } },
+                { mergeCells: { range: { sheetId, startRowIndex: (signatureBlockStartRow - 1), endRowIndex: signatureBlockEndRow, startColumnIndex: 16, endColumnIndex: 19 }, mergeType: 'MERGE_ALL' } },
+                {
+                  repeatCell: {
+                    range: { sheetId, startRowIndex: (signatureBlockStartRow - 1), endRowIndex: signatureBlockEndRow, startColumnIndex: 16, endColumnIndex: 19 },
+                    cell: { userEnteredFormat: { horizontalAlignment: 'CENTER', verticalAlignment: 'TOP', wrapStrategy: 'WRAP' } },
+                    fields: 'userEnteredFormat.horizontalAlignment,userEnteredFormat.verticalAlignment,userEnteredFormat.wrapStrategy'
+                  }
                 }
-              }] as any[]
+              ] as any[]
             : [])
         ]
       }
