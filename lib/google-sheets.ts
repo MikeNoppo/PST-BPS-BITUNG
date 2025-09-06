@@ -211,5 +211,39 @@ export async function upsertMonthlySheet({
     })
   }
 
+  // Ensure new rows keep table formatting/borders by copying the format of the first data row (A8:S8)
+  // to the entire written data range. This avoids rows appearing "outside" the table.
+  if (sheetId !== undefined && values.length > 0) {
+    const startRowIndex = dataStartRow - 1 // zero-based index for row 8 -> 7
+    const endRowIndex = startRowIndex + values.length // exclusive
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            copyPaste: {
+              source: {
+                sheetId,
+                startRowIndex,
+                endRowIndex: startRowIndex + 1, // only the first data row
+                startColumnIndex: 0, // A
+                endColumnIndex: 19, // up to S (exclusive)
+              },
+              destination: {
+                sheetId,
+                startRowIndex,
+                endRowIndex, // all data rows
+                startColumnIndex: 0,
+                endColumnIndex: 19,
+              },
+              pasteType: 'PASTE_FORMAT',
+              pasteOrientation: 'NORMAL',
+            }
+          }
+        ]
+      }
+    })
+  }
+
   return { tabTitle, sheetId }
 }
