@@ -239,6 +239,27 @@ export async function upsertMonthlySheet({
               pasteType: 'PASTE_FORMAT',
               pasteOrientation: 'NORMAL',
             }
+          },
+          {
+            repeatCell: {
+              range: { sheetId, startRowIndex, endRowIndex, startColumnIndex: 15, endColumnIndex: 16 },
+              cell: { userEnteredFormat: { horizontalAlignment: 'CENTER' } },
+              fields: 'userEnteredFormat.horizontalAlignment'
+            }
+          },
+          {
+            repeatCell: {
+              range: { sheetId, startRowIndex, endRowIndex, startColumnIndex: 16, endColumnIndex: 17 },
+              cell: { userEnteredFormat: { horizontalAlignment: 'CENTER' } },
+              fields: 'userEnteredFormat.horizontalAlignment'
+            }
+          },
+          {
+            repeatCell: {
+              range: { sheetId, startRowIndex, endRowIndex, startColumnIndex: 17, endColumnIndex: 18 },
+              cell: { userEnteredFormat: { horizontalAlignment: 'CENTER' } },
+              fields: 'userEnteredFormat.horizontalAlignment'
+            }
           }
         ]
       }
