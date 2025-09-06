@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { humanizeClassification, humanizeStatus } from '@/lib/humanize'
-import { upsertMonthlySheet } from '@/lib/google-sheets'
+import { upsertMonthlySheet, CHAIRPERSON_NAME } from '@/lib/google-sheets'
 import { apiError } from '@/lib/api-response'
 
 // POST /api/export/sheets/monthly { year: '2025', month: '07' }
@@ -44,6 +44,9 @@ export async function POST(req: Request) {
     ]
     const classificationFootnotes = order.map((o, i) => `${i + 1}. ${o[0] + o.slice(1).toLowerCase()}`)
 
+    const monthIdx = parseInt(month, 10) - 1
+    const monthLong = new Date(parseInt(year, 10), monthIdx, 1).toLocaleDateString('id-ID', { month: 'long' })
+
     const { tabTitle, sheetId } = await upsertMonthlySheet({
       spreadsheetId,
       year,
@@ -61,6 +64,15 @@ export async function POST(req: Request) {
         completedAt: c.completedAt || null,
       })),
       classificationFootnotes,
+      signatureLines: [
+        `Bitung,      ${monthLong} ${year}`,
+        'Tim Penanganan Pengaduan',
+        'Ketua,',
+        '',
+        '',
+        '',
+        CHAIRPERSON_NAME,
+      ],
     })
 
     const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=${sheetId ?? 0}`

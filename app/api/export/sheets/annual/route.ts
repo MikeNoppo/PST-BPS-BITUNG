@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { humanizeClassification, humanizeStatus } from '@/lib/humanize'
-import { upsertAnnualSheet } from '@/lib/google-sheets'
+import { upsertAnnualSheet, CHAIRPERSON_NAME } from '@/lib/google-sheets'
 import { apiError } from '@/lib/api-response'
 
 // POST /api/export/sheets/annual { year: '2025' }
@@ -65,6 +65,15 @@ export async function POST(req: Request) {
       headerMeta: { classificationNumbers: order.map((_,i)=> String(i+1)) },
       rows,
       classificationFootnotes,
+      signatureLines: [
+        `Bitung,      ${year}`,
+        'Tim Penanganan Pengaduan',
+        'Ketua,',
+        '',
+        '',
+        '',
+        CHAIRPERSON_NAME,
+      ],
     })
 
   const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=${sheetId ?? 0}`
