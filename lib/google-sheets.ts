@@ -8,6 +8,7 @@ function getAuth() {
   if (!email || !key) throw new Error('Google service account env missing')
   return new google.auth.JWT({ email, key, scopes: SCOPES })
 }
+ 
 
 export interface AnnualSummaryRow {
   no: number
@@ -259,6 +260,22 @@ export async function upsertMonthlySheet({
               range: { sheetId, startRowIndex, endRowIndex, startColumnIndex: 17, endColumnIndex: 18 },
               cell: { userEnteredFormat: { horizontalAlignment: 'CENTER' } },
               fields: 'userEnteredFormat.horizontalAlignment'
+            }
+          },
+          // Wrap and top-align text in column F (Ringkasan Pengaduan)
+          {
+            repeatCell: {
+              range: { sheetId, startRowIndex, endRowIndex, startColumnIndex: 5, endColumnIndex: 6 },
+              cell: { userEnteredFormat: { wrapStrategy: 'WRAP', verticalAlignment: 'TOP' } },
+              fields: 'userEnteredFormat.wrapStrategy,userEnteredFormat.verticalAlignment'
+            }
+          },
+          // Wrap and top-align text in column S (Keterangan)
+          {
+            repeatCell: {
+              range: { sheetId, startRowIndex, endRowIndex, startColumnIndex: 18, endColumnIndex: 19 },
+              cell: { userEnteredFormat: { wrapStrategy: 'WRAP', verticalAlignment: 'TOP' } },
+              fields: 'userEnteredFormat.wrapStrategy,userEnteredFormat.verticalAlignment'
             }
           }
         ]
