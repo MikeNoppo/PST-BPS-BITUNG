@@ -262,20 +262,28 @@ export async function upsertMonthlySheet({
               fields: 'userEnteredFormat.horizontalAlignment'
             }
           },
-          // Wrap and top-align text in column F (Ringkasan Pengaduan)
+          // Wrap text in column F (Ringkasan Pengaduan)
           {
             repeatCell: {
               range: { sheetId, startRowIndex, endRowIndex, startColumnIndex: 5, endColumnIndex: 6 },
-              cell: { userEnteredFormat: { wrapStrategy: 'WRAP', verticalAlignment: 'TOP' } },
-              fields: 'userEnteredFormat.wrapStrategy,userEnteredFormat.verticalAlignment'
+              cell: { userEnteredFormat: { wrapStrategy: 'WRAP' } },
+              fields: 'userEnteredFormat.wrapStrategy'
             }
           },
-          // Wrap and top-align text in column S (Keterangan)
+          // Wrap text in column S (Keterangan)
           {
             repeatCell: {
               range: { sheetId, startRowIndex, endRowIndex, startColumnIndex: 18, endColumnIndex: 19 },
-              cell: { userEnteredFormat: { wrapStrategy: 'WRAP', verticalAlignment: 'TOP' } },
-              fields: 'userEnteredFormat.wrapStrategy,userEnteredFormat.verticalAlignment'
+              cell: { userEnteredFormat: { wrapStrategy: 'WRAP' } },
+              fields: 'userEnteredFormat.wrapStrategy'
+            }
+          },
+          // Center align all data cells in table A..S
+          {
+            repeatCell: {
+              range: { sheetId, startRowIndex, endRowIndex, startColumnIndex: 0, endColumnIndex: 19 },
+              cell: { userEnteredFormat: { horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE' } },
+              fields: 'userEnteredFormat.horizontalAlignment,userEnteredFormat.verticalAlignment'
             }
           }
         ]
