@@ -277,6 +277,17 @@ export async function upsertMonthlySheet({
               cell: { userEnteredFormat: { wrapStrategy: 'WRAP', verticalAlignment: 'TOP' } },
               fields: 'userEnteredFormat.wrapStrategy,userEnteredFormat.verticalAlignment'
             }
+          },
+          // Auto-resize row heights for the data range so wrapped text is fully visible
+          {
+            autoResizeDimensions: {
+              dimensions: {
+                sheetId,
+                dimension: 'ROWS',
+                startIndex: startRowIndex,
+                endIndex: endRowIndex,
+              }
+            }
           }
         ]
       }
