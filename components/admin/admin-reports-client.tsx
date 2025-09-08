@@ -4,10 +4,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Printer } from 'lucide-react'
-import { ExportDropdown, MONTHS, exportToCSV, exportToExcel } from '@/components/export-utils'
+import { ExportDropdown, MONTHS } from '@/components/export-utils'
 import { toast } from '@/hooks/use-toast'
 
 export type Complaint = {
@@ -40,7 +38,6 @@ export default function AdminReportsClient({ years, initialYear, initialMonth, i
   const [year, setYear] = useState(initialYear)
   const [month, setMonth] = useState(initialMonth)
   const [reportType, setReportType] = useState<'monthly' | 'annual'>(initialReportType)
-  const [exporting, setExporting] = useState(false)
   const [userChangedMonth, setUserChangedMonth] = useState(false)
   const [exportingSheets, setExportingSheets] = useState(false)
 
@@ -91,40 +88,6 @@ export default function AdminReportsClient({ years, initialYear, initialMonth, i
       status: c.status,
     })), [initialData])
 
-  type ExportFormat = 'csv' | 'excel'
-  const handleExport = async (fmt: ExportFormat) => {
-    setExporting(true)
-    try {
-      const isMonthly = reportType === 'monthly'
-      if (isMonthly) {
-        const headers = ['No','Tanggal Pengaduan','Nama Pelapor','Email','No WhatsApp','Isi Pengaduan','Klasifikasi','RTL','Status','Tanggal Selesai']
-        const monthLabel = monthName(month)
-        const filename = `laporan-bulanan-${monthLabel}-${year}.${fmt === 'csv' ? 'csv' : 'xls'}`
-        const mapper = (item: any) => [
-          item.no,
-          new Date(item.tanggal).toLocaleDateString('id-ID'),
-          item.nama,
-          item.email,
-          item.noWA,
-          item.isiPengaduan,
-          item.klasifikasi,
-          item.rtl,
-          item.status,
-          item.tanggalSelesai !== '-' ? new Date(item.tanggalSelesai).toLocaleDateString('id-ID') : '-'
-        ]
-        fmt === 'csv'
-          ? exportToCSV(monthlyData, headers, filename, mapper)
-          : exportToExcel(monthlyData, headers, filename, mapper)
-      } else {
-        const headers = ['No','Bulan','Klasifikasi Pengaduan','Status Penanganan']
-        const filename = `laporan-tahunan-${year}.${fmt === 'csv' ? 'csv' : 'xls'}`
-        const mapper = (item: any) => [item.no, item.bulan, item.klasifikasi, item.status]
-        fmt === 'csv'
-          ? exportToCSV(annualData, headers, filename, mapper)
-          : exportToExcel(annualData, headers, filename, mapper)
-      }
-    } finally { setExporting(false) }
-  }
 
   const buildAnnualSummaryMatrix = () => {
     const order: string[] = [
@@ -207,7 +170,6 @@ export default function AdminReportsClient({ years, initialYear, initialMonth, i
     }
   }
 
-  const handlePrint = () => window.print()
 
   return (
     <div className="space-y-6">
@@ -252,16 +214,11 @@ export default function AdminReportsClient({ years, initialYear, initialMonth, i
               </Select>
             </div>
             <div className="flex space-x-2">
-              <Button onClick={handlePrint} variant="soft" className="flex items-center space-x-2" disabled={!year || exporting}>
-                <Printer className="w-4 h-4" />
-                <span>Cetak</span>
-              </Button>
               <ExportDropdown
-                onCSV={() => handleExport('csv')}
-                onExcel={() => handleExport('excel')}
-                disabled={!year || exporting || exportingSheets}
+                disabled={!year || exportingSheets}
                 count={reportType === 'monthly' ? monthlyData.length : annualData.length}
                 onSheets={reportType === 'annual' ? exportAnnualSheets : reportType === 'monthly' ? exportMonthlySheets : undefined}
+                label="Export ke Sheets"
               />
             </div>
           </div>
@@ -272,14 +229,6 @@ export default function AdminReportsClient({ years, initialYear, initialMonth, i
               Pilih tahun terlebih dahulu untuk menampilkan data laporan.
             </div>
           )}
-          {/* Print header */}
-          <div className="hidden print:block mb-6 text-center">
-            <h1 className="text-2xl font-bold text-blue-900 mb-2">LAPORAN PENGADUAN PST BPS KOTA BITUNG</h1>
-            <h2 className="text-lg font-semibold">
-              {reportType === 'monthly' ? `Laporan Bulanan - ${monthName(month)} ${year}` : `Laporan Tahunan - ${year}`}
-            </h2>
-            <hr className="mt-4 mb-6" />
-          </div>
 
           {reportType === 'monthly' && year && (
             <div className="overflow-x-auto">
@@ -355,16 +304,7 @@ export default function AdminReportsClient({ years, initialYear, initialMonth, i
             </div>
           )}
 
-          <div className="hidden print:block mt-8 text-right">
-            <p className="text-sm">Dicetak pada: {new Date().toLocaleDateString('id-ID')}</p>
-            <div className="mt-8">
-              <p className="text-sm">Kepala BPS Kota Bitung</p>
-              <div className="mt-12">
-                <p className="text-sm font-medium">_____________________</p>
-                <p className="text-sm">NIP. ___________________</p>
-              </div>
-            </div>
-          </div>
+          {/* Print feature removed */}
         </CardContent>
       </Card>
     </div>
