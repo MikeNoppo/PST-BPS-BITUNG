@@ -45,7 +45,7 @@ export const authOptions: NextAuthOptions = {
         if (!allowed) return null
 
         const admin = await prisma.adminUser.findFirst({
-          where: { username: ident }
+          where: { username: { equals: ident, mode: 'insensitive' } }
         })
         if (!admin || !admin.passwordHash) {
           // Dummy compare to equalize timing

@@ -3,21 +3,17 @@ import { prisma } from '../lib/prisma'
 import bcrypt from 'bcryptjs'
 
 async function main() {
-  const adminUser = await prisma.adminUser.findFirst({ where: { username: 'adminPST7172' } })
-  if (!adminUser) {
-    const password = process.env.INIT_ADMIN_PASSWORD || 'admin123'
-    const hash = await bcrypt.hash(password, 10)
-    await prisma.adminUser.create({
-      data: {
-        username: 'admin',
-        passwordHash: hash,
-        role: 'ADMIN'
-      }
-    })
-    console.log(`Seeded admin user: admin / ${password}`)
-  } else {
-    console.log('Admin user already exists; skipping seed.')
-  }
+  const username = 'adminPST7172'
+  const password = process.env.INIT_ADMIN_PASSWORD || 'admin123'
+  const hash = await bcrypt.hash(password, 10)
+
+  const existed = await prisma.adminUser.findUnique({ where: { username } })
+  await prisma.adminUser.upsert({
+    where: { username },
+    update: { passwordHash: hash, role: 'ADMIN' },
+    create: { username, passwordHash: hash, role: 'ADMIN' }
+  })
+  console.log(`${existed ? 'Updated' : 'Seeded'} admin user: ${username} / ${password}`)
 }
 
 main().catch(e => {
