@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { User, Menu, Home, FileText, Search } from 'lucide-react'
+import { Menu, Home, FileText, Search } from 'lucide-react'
 import Image from 'next/image'
 
 const navigationItems = [
@@ -104,22 +104,8 @@ export default function NavigationSecondary() {
             })}
           </nav>
 
-          {/* Admin Login & Mobile Menu */}
+          {/* Mobile Menu (Admin login removed) */}
           <div className="flex items-center space-x-3">
-            {/* Admin Login Button */}
-            <Link href="/admin/login">
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="hidden sm:flex items-center space-x-2 border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
-              >
-                <User className="w-4 h-4" />
-                <span className="hidden md:inline">Admin Login</span>
-                <span className="md:hidden">Admin</span>
-              </Button>
-            </Link>
-
-            {/* Mobile Menu */}
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
                 <Button
@@ -180,15 +166,7 @@ export default function NavigationSecondary() {
                       })}
                     </div>
 
-                    {/* Mobile Admin Login */}
-                    <div className="mt-8 pt-6 border-t border-gray-200">
-                      <Link href="/admin/login" onClick={() => setIsOpen(false)}>
-                        <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3">
-                          <User className="w-4 h-4 mr-2" />
-                          Admin Login
-                        </Button>
-                      </Link>
-                    </div>
+                    {/* Admin login entry removed from mobile drawer */}
                   </nav>
 
                   {/* Mobile Footer */}
