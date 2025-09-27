@@ -28,7 +28,6 @@ export function Footer() {
             <li><Link className="hover:text-white transition-colors" href="/">Beranda</Link></li>
             <li><Link className="hover:text-white transition-colors" href="/pengaduan">Buat Pengaduan</Link></li>
             <li><Link className="hover:text-white transition-colors" href="/status">Cek Status</Link></li>
-            {/* Admin login link removed per request */}
           </ul>
         </nav>
         {/* Kontak */}

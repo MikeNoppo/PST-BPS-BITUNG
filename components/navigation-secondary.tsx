@@ -104,7 +104,6 @@ export default function NavigationSecondary() {
             })}
           </nav>
 
-          {/* Mobile Menu (Admin login removed) */}
           <div className="flex items-center space-x-3">
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
@@ -166,7 +165,6 @@ export default function NavigationSecondary() {
                       })}
                     </div>
 
-                    {/* Admin login entry removed from mobile drawer */}
                   </nav>
 
                   {/* Mobile Footer */}
